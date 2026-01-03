@@ -469,3 +469,8 @@ body{
   .ps-box p{margin:0}
   .ps-steps ol{margin:0; padding-left:18px}
 }
+
+
+/* subtle feedback */
+.shake{ animation: shake .35s linear; }
+@keyframes shake{ 0%{transform:translateX(0)} 25%{transform:translateX(-3px)} 50%{transform:translateX(3px)} 75%{transform:translateX(-2px)} 100%{transform:translateX(0)} }

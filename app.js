@@ -125,6 +125,8 @@ function switchView(view){
 }
 
 function renderDashboard(){
+  // harden schedule data
+  state.tasks.forEach(t=>{ try{ ensureSchedule(t); }catch(e){} });
   const total = state.tasks.length;
   const done = state.tasks.filter(t=>t.status==="Afgerond").length;
   const progressPct = total ? Math.round((done/total)*100) : 0;
@@ -234,6 +236,8 @@ function applyTaskFilters(list){
 
 
 function renderTasks(){
+  // harden schedule data
+  state.tasks.forEach(t=>{ try{ ensureSchedule(t); }catch(e){} });
   populateFilters();
 
   const tbody = document.querySelector("#table-tasks tbody");
@@ -343,6 +347,9 @@ function openTaskAndScroll(taskId){
 function openTask(taskId){
   const t = state.tasks.find(x=>x.id===taskId);
   if(!t) return;
+  // harden / migrate schedule
+  ensureSchedule(t);
+  if(!Array.isArray(t.assignees)) t.assignees = [];
   state.selectedTaskId = taskId;
 
   const drawer = document.getElementById("drawer");
@@ -418,6 +425,9 @@ function readTaskForm(){
   const id = state.selectedTaskId;
   const t = state.tasks.find(x=>x.id===id);
   if(!t) return null;
+  // ensure nested structures exist
+  ensureSchedule(t);
+  if(!Array.isArray(t.assignees)) t.assignees = [];
 
   t.title = document.getElementById("f-title").value.trim() || t.title;
   t.project = document.getElementById("f-project").value.trim();
@@ -677,15 +687,32 @@ function wireUI(){
     state.selectedTaskId = null;
   };
 
-  document.getElementById("btn-save").onclick = ()=>{
-    const t = readTaskForm();
-    if(!t) return;
-    // update drawer title
-    document.getElementById("drawer-title").textContent = t.title;
-    saveToStorage();
-    renderTasks();
-    renderDashboard();
-    alert("Opgeslagen ✅");
+  document.getElementById("btn-save").onclick = (e)=>{
+    if(e){ e.preventDefault(); }
+    const btn = document.getElementById("btn-save");
+    try{
+      const t = readTaskForm();
+      if(!t){
+        // no selected task -> nothing to save
+        btn.classList.add("shake");
+        setTimeout(()=>btn.classList.remove("shake"), 400);
+        return;
+      }
+      // update drawer title
+      document.getElementById("drawer-title").textContent = t.title;
+      saveToStorage();
+      renderTasks();
+      renderDashboard();
+
+      // subtle inline feedback (no popup dependency)
+      const old = btn.textContent;
+      btn.textContent = "Opgeslagen ✅";
+      btn.disabled = true;
+      setTimeout(()=>{ btn.textContent = old; btn.disabled = false; }, 900);
+    }catch(err){
+      console.error(err);
+      alert("Opslaan mislukt. Open je browser-console voor details.");
+    }
   };
 
   document.getElementById("btn-print").onclick = (e)=>{
@@ -753,6 +780,39 @@ function ymd(d){
   const pad = (n)=>String(n).padStart(2,"0");
   return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 }
+function ensureSchedule(t){
+  if(!t.scheduled) t.scheduled = { date:"", timeblock:"", start:"", end:"" };
+  if(typeof t.scheduled !== "object") t.scheduled = { date:"", timeblock:"", start:"", end:"" };
+
+  // migrate legacy date/timeblock -> start/end
+  if(!t.scheduled.start && t.scheduled.date){
+    const tb = parseTimeblock(t.scheduled.timeblock || "") || { sh:9, sm:0, eh:17, em:0 };
+    const pad=(n)=>String(n).padStart(2,"0");
+    t.scheduled.start = `${t.scheduled.date}T${pad(tb.sh)}:${pad(tb.sm)}`;
+    t.scheduled.end = `${t.scheduled.date}T${pad(tb.eh)}:${pad(tb.em)}`;
+  }
+
+  // infer legacy date from start if needed
+  if(t.scheduled.start && !t.scheduled.date){
+    try{
+      const s = new Date(t.scheduled.start);
+      const pad=(n)=>String(n).padStart(2,"0");
+      t.scheduled.date = `${s.getFullYear()}-${pad(s.getMonth()+1)}-${pad(s.getDate())}`;
+    }catch(e){}
+  }
+
+  // if end missing, default +1h
+  if(t.scheduled.start && !t.scheduled.end){
+    try{
+      const s = new Date(t.scheduled.start);
+      s.setHours(s.getHours()+1);
+      const pad=(n)=>String(n).padStart(2,"0");
+      t.scheduled.end = `${s.getFullYear()}-${pad(s.getMonth()+1)}-${pad(s.getDate())}T${pad(s.getHours())}:${pad(s.getMinutes())}`;
+    }catch(e){}
+  }
+}
+
+
 function parseTimeblock(tb){
   // supports "09:00–12:00", "09:00-12:00", "09:00 – 12:00"
   const s = (tb||"").trim();
