@@ -65,6 +65,10 @@ async function loadDefaults(){
   return { tasks, people };
 }
 
+
+function getExec1(task){ return (task.assignees||[])[0] || ""; }
+function getExec2(task){ return (task.assignees||[])[1] || ""; }
+
 function getPersonName(id){
   const p = state.people.find(x => x.id === id);
   return p ? p.name : (id || "–");
@@ -122,7 +126,6 @@ function renderDashboard(){
   const sumActual = state.tasks.reduce((a,t)=>a + (Number(t.actual_hours)||0),0);
 
   const blocked = state.tasks.filter(t=>t.status.startsWith("Wacht")).length;
-  const mustOpen = state.tasks.filter(t=>t.priority==="Must" && t.status!=="Afgerond").length;
 
   document.getElementById("kpi-progress").textContent = `${progressPct}%`;
   document.getElementById("kpi-progress-note").textContent = `${done}/${total} afgerond`;
@@ -146,123 +149,11 @@ function renderDashboard(){
   const tbody = document.querySelector("#table-upcoming tbody");
   tbody.innerHTML = "";
   if(upcoming.length === 0){
+    const startTxt = t.scheduled?.start ? fmtDateTime(t.scheduled.start) : (t.scheduled?.date ? t.scheduled.date : "–");
+    const endTxt = t.scheduled?.end ? fmtDateTime(t.scheduled.end) : "–";
+    const exec1Txt = getPersonName(getExec1(t));
+    const exec2Txt = getPersonName(getExec2(t));
     tbody.appendChild(el("tr", {class:"clickrow", onclick:(e)=>{ if(e.target && (e.target.tagName==="A" || e.target.closest("a"))) return; openTaskAndScroll(t.id);} }, [
-      el("td", {colspan:"7", class:"muted"}, "Nog geen klussen ingepland. Tip: plan eerst OH-PRE (presentatie) en de Must-keukenpunten.")
-    ]));
-    return;
-  }
-
-  upcoming.forEach(t=>{
-    const dot = getStatusDot(t.status);
-    const statusCell = el("span", {class:"tag"}, [
-      el("span", {class:`dot ${dot}`}),
-      t.status
-    ]);
-
-    const startTxt = t.scheduled?.start ? fmtDateTime(t.scheduled.start) : "–";
-    const endTxt = t.scheduled?.end ? fmtDateTime(t.scheduled.end) : "–";
-    const exec1Txt = getPersonName(t.executors?.exec1);
-    const exec2Txt = getPersonName(t.executors?.exec2);
-
-    tbody.appendChild(el("tr", {class:"clickrow", onclick:(e)=>{ if(e.target && (e.target.tagName==="A" || e.target.closest("a"))) return; switchView("tasks"); openTaskAndScroll(t.id);} }, [
-      el("td", {}, t.title),
-      el("td", {}, t.location || "–"),
-      el("td", {}, statusCell),
-      el("td", {}, startTxt),
-      el("td", {}, endTxt),
-      el("td", {}, exec1Txt),
-      el("td", {}, exec2Txt),
-      el("td", {}, el("a", {class:"action-link", href:"#", onclick:(e)=>{e.preventDefault(); switchView("tasks"); openTaskAndScroll(t.id);} }, "Open"))
-    ]));
-  });
-}
-
-function populateFilters(){
-  // status
-  const statusSel = document.getElementById("filter-status");
-  statusSel.innerHTML = "";
-  statusSel.appendChild(el("option", {value:""}, "Alle status"));
-  STATUSES.forEach(s => statusSel.appendChild(el("option", {value:s}, s)));
-
-  // group
-  const groups = Array.from(new Set(state.tasks.map(t=>t.group).filter(Boolean))).sort();
-  const groupSel = document.getElementById("filter-group");
-  groupSel.innerHTML = "";
-  groupSel.appendChild(el("option", {value:""}, "Alle groepen"));
-  groups.forEach(g => groupSel.appendChild(el("option", {value:g}, g)));
-
-  // assignee
-  const assSel = document.getElementById("filter-person");
-  assSel.innerHTML = "";
-  assSel.appendChild(el("option", {value:""}, "Iedereen"));
-  state.people
-    .slice()
-    .sort((a,b)=>a.name.localeCompare(b.name))
-    .forEach(p => assSel.appendChild(el("option", {value:p.id}, p.name)));
-}
-
-function applyTaskFilters(tasks){
-  const q = (document.getElementById("filter-search").value || "").toLowerCase().trim();
-  const status = document.getElementById("filter-status").value;
-  const group = document.getElementById("filter-group").value;
-  const assignee = document.getElementById("filter-person").value;
-  return tasks.filter(t=>{    if(status && t.status !== status) return false;
-    if(group && t.group !== group) return false;
-    if(assignee){
-      const set = new Set([t.executors?.exec1, t.executors?.exec2].filter(Boolean));
-      if(!set.has(assignee)) return false;
-    }
-    if(q){
-      const hay = `${t.id} ${t.title} ${t.location} ${t.group} ${t.project}`.toLowerCase();
-      if(!hay.includes(q)) return false;
-    }
-    return true;
-  });
-}
-
-function renderTasks(){
-  populateFilters();
-
-  const tbody = document.querySelector("#table-tasks tbody");
-  tbody.innerHTML = "";
-
-  const tasksSorted = state.tasks.slice().sort((a,b)=>{
-    // prioritize must open, then status, then id
-    const aMustOpen = (a.priority==="Must" && a.status!=="Afgerond") ? 0 : 1;
-    const bMustOpen = (b.priority==="Must" && b.status!=="Afgerond") ? 0 : 1;
-    if(aMustOpen !== bMustOpen) return aMustOpen - bMustOpen;
-
-    const sa = STATUSES.indexOf(a.status);
-    const sb = STATUSES.indexOf(b.status);
-    if(sa !== sb) return sa - sb;
-
-    return (a.id||"").localeCompare(b.id||"");
-  });
-
-  const filtered = applyTaskFilters(tasksSorted);
-
-  if(filtered.length === 0){
-    tbody.appendChild(el("tr", {}, [
-      el("td", {colspan:"11", class:"muted"}, "Geen resultaten met deze filters.")
-    ]));
-    return;
-  }
-
-  filtered.forEach(t=>{
-    const dot = getStatusDot(t.status);
-    const statusTag = el("span", {class:"tag"}, [
-      el("span", {class:`dot ${dot}`}),
-      t.status
-    ]);
-      ? assignedIds.map(id => el("span", {class:"tag"}, getPersonName(id)))
-      : el("span", {class:"muted"}, "–");
-
-    const startTxt = t.scheduled?.start ? fmtDateTime(t.scheduled.start) : "–";
-    const endTxt = t.scheduled?.end ? fmtDateTime(t.scheduled.end) : "–";
-    const exec1Txt = getPersonName(t.executors?.exec1);
-    const exec2Txt = getPersonName(t.executors?.exec2);
-
-    tbody.appendChild(el("tr", {}, [
       el("td", {}, t.title),
       el("td", {}, t.group || "–"),
       el("td", {}, t.location || "–"),
@@ -277,7 +168,7 @@ function renderTasks(){
   });
 
   // wire filter changes
-  ["filter-search","filter-status","filter-group","filter-person"].forEach(id=>{
+  ["filter-search","filter-status","filter-group","filter-person","filter-must-removed"].forEach(id=>{
     const node = document.getElementById(id);
     node.oninput = () => renderTasks();
     node.onchange = () => renderTasks();
@@ -293,11 +184,13 @@ function newTaskTemplate(){
     type: "Binnen",
     category: "",
     title: "Nieuwe klus",
+    priority: "" ,
     status: "Backlog",
-    executors: { exec1: "", exec2: "" },
+    owner: "ian",
+    assignees: [],
     estimate_hours: { optimistic: 0, realistic: 0, worst: 0 },
     actual_hours: 0,
-    scheduled: { start: "", end: "" },
+    scheduled: { date: "", timeblock: "" },
     dependencies: [],
     definition_of_done: "",
     materials: [],
@@ -335,13 +228,13 @@ function openTask(taskId){
   const drawer = document.getElementById("drawer");
   drawer.classList.remove("hidden");
 
-    document.getElementById("drawer-title").textContent = t.title;
+  document.getElementById("drawer-id").textContent = t.id;
+  document.getElementById("drawer-title").textContent = t.title;
 
   // fill status select
   const stSel = document.getElementById("f-status");
   stSel.innerHTML = "";
   STATUSES.forEach(s => stSel.appendChild(el("option", {value:s}, s)));
-
   // fill executors selects
   const exec1Sel = document.getElementById("f-exec1");
   const exec2Sel = document.getElementById("f-exec2");
@@ -354,27 +247,19 @@ function openTask(taskId){
     exec2Sel.appendChild(el("option", {value:p.id}, p.name));
   });
 
-  // fill owner select
-  const ownerSel = document.getElementById("f-owner");
-  ownerSel.innerHTML = "";
-  state.people.slice().sort((a,b)=>a.name.localeCompare(b.name)).forEach(p=>{
-    ownerSel.appendChild(el("option", {value:p.id}, p.name));
-  });
-
-  // assignees multi
-  
   // basic fields
   document.getElementById("f-title").value = t.title || "";
   document.getElementById("f-project").value = t.project || "";
   document.getElementById("f-group").value = t.group || "";
   document.getElementById("f-location").value = t.location || "";
-    document.getElementById("f-status").value = t.status || "Backlog";
-  document.getElementById("f-exec1").value = t.executors?.exec1 || "";
-  document.getElementById("f-exec2").value = t.executors?.exec2 || "";
+  document.getElementById("f-priority").value = t.priority || "Should";
+  document.getElementById("f-status").value = t.status || "Backlog";
+  document.getElementById("f-exec1").value = getExec1(t);
+  document.getElementById("f-exec2").value = getExec2(t);
+
   document.getElementById("f-start").value = t.scheduled?.start || "";
   document.getElementById("f-end").value = t.scheduled?.end || "";
-  
-    
+
   document.getElementById("f-o").value = t.estimate_hours?.optimistic ?? 0;
   document.getElementById("f-r").value = t.estimate_hours?.realistic ?? 0;
   document.getElementById("f-w").value = t.estimate_hours?.worst ?? 0;
@@ -394,7 +279,6 @@ function openTask(taskId){
 }
 
 
-
 function readTaskForm(){
   const t = state.tasks.find(x=>x.id===state.selectedTaskId);
   if(!t) return null;
@@ -405,7 +289,7 @@ function readTaskForm(){
   t.location = document.getElementById("f-location").value.trim();
   t.priority = document.getElementById("f-priority").value;
   t.status = document.getElementById("f-status").value;
-  
+
   t.scheduled = {
     date: document.getElementById("f-date").value,
     timeblock: document.getElementById("f-timeblock").value.trim()
@@ -421,10 +305,7 @@ function readTaskForm(){
 
   t.definition_of_done = document.getElementById("f-dod").value.trim();
 
-  t.executors = {
-    exec1: document.getElementById("f-exec1").value,
-    exec2: document.getElementById("f-exec2").value
-  };
+  t.assignees = [document.getElementById("f-exec1").value, document.getElementById("f-exec2").value].filter(Boolean);
 
   // parse materials
   const mLines = document.getElementById("f-materials").value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
@@ -447,8 +328,8 @@ function readTaskForm(){
 }
 
 function buildPrintSheet(task){
-  const exec1 = getPersonName(task.executors?.exec1);
-  const exec2 = getPersonName(task.executors?.exec2);
+  const exec1 = getPersonName(getExec1(task));
+  const exec2 = getPersonName(getExec2(task));
   
   const start = task.scheduled?.start ? fmtDateTime(task.scheduled.start) : "–";
   const end = task.scheduled?.end ? fmtDateTime(task.scheduled.end) : "–";
@@ -473,8 +354,7 @@ function buildPrintSheet(task){
     <div class="ps-grid">
       <div class="ps-box">
         <h4>Mensen</h4>
-        <p>
-        <strong>Uitvoerder 1:</strong> ${escapeHtml(exec1)}<br/>
+        <p><strong>Uitvoerder 1:</strong> ${escapeHtml(exec1)}<br/>
         <strong>Uitvoerder 2:</strong> ${escapeHtml(exec2)}</p>
       </div>
       <div class="ps-box">
@@ -591,10 +471,8 @@ function renderPeople(){
         state.people = state.people.filter(x=>x.id!==p.id);
         // also remove from assignments/owner
         state.tasks.forEach(t=>{
-          if(t.executors){
-            if(t.executors.exec1 === p.id) t.executors.exec1 = "";
-            if(t.executors.exec2 === p.id) t.executors.exec2 = "";
-          }
+          if(t.owner === p.id) t.owner = "";
+          t.assignees = (t.assignees||[]).filter(id=>id!==p.id);
         });
         saveToStorage();
         renderPeople();
@@ -650,8 +528,7 @@ function wireUI(){
     document.getElementById("filter-status").value = "";
     document.getElementById("filter-group").value = "";
     document.getElementById("filter-person").value = "";
-    document.getElementById("filter-must").checked = false;
-    renderTasks();
+        renderTasks();
   };
 
   document.getElementById("btn-close").onclick = ()=>{
@@ -785,7 +662,7 @@ function scheduledTasksInRange(range){
       const end = new Date(t.scheduled.end);
       return { task: t, start, end };
     })
-    .filter(x=> x.end > range.start && x.start < range.end)
+    .filter(x=> x.end > range.start && x.start < range.end) // overlaps
     .sort((a,b)=> (a.start - b.start) || ((a.task.title||"").localeCompare(b.task.title||"")));
 }
 
@@ -811,7 +688,6 @@ function buildGantt(range){
     colW = 54;
     labels = Array.from({length:24}, (_,h)=> `${String(h).padStart(2,"0")}:00`);
   }else{
-    // day columns
     const days = Math.round((range.end - range.start)/(1000*60*60*24));
     cols = days;
     colW = 44;
@@ -823,43 +699,49 @@ function buildGantt(range){
 
   grid.style.gridTemplateColumns = `${labelW}px repeat(${cols}, ${colW}px)`;
 
-  // header row
+  // header
   grid.appendChild(el("div", {class:"gantt-cell gantt-head gantt-label"}, "Klus"));
-  labels.forEach(l=>{
-    grid.appendChild(el("div", {class:"gantt-cell gantt-head"}, l));
-  });
+  labels.forEach(l=> grid.appendChild(el("div", {class:"gantt-cell gantt-head"}, l)));
 
   if(items.length === 0){
-    // One empty row
     grid.appendChild(el("div", {class:"gantt-cell gantt-label"}, "–"));
     grid.appendChild(el("div", {class:"gantt-cell", style:`grid-column: span ${cols}`}, "Geen ingeplande klussen in deze periode."));
     return wrap;
   }
 
   items.forEach(({task, start, end})=>{
-    // label cell
+    const exec1 = getPersonName(getExec1(task));
+    const exec2 = getPersonName(getExec2(task));
     const label = el("div", {class:"gantt-cell gantt-label"}, [
       el("div", {style:"font-weight:900"}, `${task.title}`),
-      el("div", {class:"small"}, `${task.group || "–"} • ${task.location || "–"} • ${fmtDateTime(task.scheduled.start)} → ${fmtDateTime(task.scheduled.end)}`)
+      el("div", {class:"small"}, `${task.group || "–"} • ${task.location || "–"} • ${exec1}${exec2 && exec2!=="–" ? " + " + exec2 : ""}`)
     ]);
     grid.appendChild(label);
 
-    // track cells (merged in one big cell spanning all cols)
     const track = el("div", {class:"gantt-cell gantt-track gantt-row", style:`grid-column: span ${cols}; position:relative; padding:0;`});
     track.style.height = "54px";
     grid.appendChild(track);
 
-    // compute bar position
     let startPos = 0, endPos = cols;
+
     if(range.unit === "hour"){
-      const startMin = tb ? tb.startMin : 9*60;
-      const endMin = tb ? tb.endMin : 17*60;
+      const dayStart = new Date(range.start);
+      const dayEnd = new Date(range.end);
+      const s = new Date(Math.max(start.getTime(), dayStart.getTime()));
+      const e = new Date(Math.min(end.getTime(), dayEnd.getTime()));
+      const startMin = s.getHours()*60 + s.getMinutes();
+      const endMin = e.getHours()*60 + e.getMinutes();
       startPos = clamp(startMin/60, 0, 24);
       endPos = clamp(endMin/60, 0, 24);
     }else{
-      const dayIndex = Math.floor((new Date(date+"T00:00:00") - range.start)/(1000*60*60*24));
-      startPos = clamp(dayIndex, 0, cols-1);
-      endPos = clamp(dayIndex + 1, 1, cols);
+      const sDay = new Date(start); sDay.setHours(0,0,0,0);
+      const eDay = new Date(end); eDay.setHours(0,0,0,0);
+      const dayIndexStart = Math.floor((sDay - range.start)/(1000*60*60*24));
+      const endsAtMidnight = end.getHours()===0 && end.getMinutes()===0;
+      const dayIndexEnd = Math.floor((eDay - range.start)/(1000*60*60*24)) + (endsAtMidnight ? 0 : 1);
+      startPos = clamp(dayIndexStart, 0, cols);
+      endPos = clamp(dayIndexEnd, 0, cols);
+      if(endPos <= startPos) endPos = startPos + 1;
     }
 
     const left = startPos * colW + 6;
@@ -870,11 +752,9 @@ function buildGantt(range){
       style:`left:${left}px; width:${width}px;`
     }, [
       el("span", {}, task.title),
-      el("span", {class:"tiny"}, `(${getPersonName(task.executors?.exec1)})`)
+      el("span", {class:"tiny"}, `(${fmtDateTime(task.scheduled.start)} → ${fmtDateTime(task.scheduled.end)})`)
     ]);
-
     bar.onclick = ()=>{ switchView("tasks"); openTaskAndScroll(task.id); };
-
     track.appendChild(bar);
   });
 
@@ -884,9 +764,20 @@ function buildGantt(range){
 function buildCalendar(range){
   const items = scheduledTasksInRange(range);
   const byDate = new Map();
+
+  // place each task on every day it overlaps
   items.forEach(({task, start, end})=>{
-    if(!byDate.has(date)) byDate.set(date, []);
-    byDate.get(date).push({task, tb});
+    const cur = new Date(start); cur.setHours(0,0,0,0);
+    const last = new Date(end); last.setHours(0,0,0,0);
+
+    for(let d = new Date(cur); d <= last; d.setDate(d.getDate()+1)){
+      const dayStart = new Date(d);
+      const dayEnd = new Date(d); dayEnd.setDate(dayEnd.getDate()+1);
+      if(end <= dayStart || start >= dayEnd) continue;
+      const key = ymd(dayStart);
+      if(!byDate.has(key)) byDate.set(key, []);
+      byDate.get(key).push({task, start, end});
+    }
   });
 
   if(state.planning.zoom === "day"){
@@ -894,17 +785,15 @@ function buildCalendar(range){
   }
 
   if(state.planning.zoom === "week"){
-    // week columns
     const cal = el("div", {class:"cal"});
     const week = el("div", {class:"cal-week"});
     cal.appendChild(week);
     for(let i=0;i<7;i++){
       const d = addDays(range.start, i);
-      const date = ymd(d);
+      const key = ymd(d);
       const col = el("div", {class:"cal-week-col"});
       col.appendChild(el("div", {class:"cal-week-title"}, `${["Ma","Di","Wo","Do","Vr","Za","Zo"][i]} ${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}`));
-
-      const list = (byDate.get(date)||[]);
+      const list = (byDate.get(key)||[]);
       if(list.length === 0){
         col.appendChild(el("div", {class:"muted"}, "–"));
       }else{
@@ -914,16 +803,14 @@ function buildCalendar(range){
           col.appendChild(chip);
         });
       }
-
-      col.onclick = ()=>{ state.planning.zoom = "day"; state.planning.focusDate = date; renderPlanning(); };
+      col.onclick = ()=>{ state.planning.zoom = "day"; state.planning.focusDate = key; renderPlanning(); };
       week.appendChild(col);
     }
     return cal;
   }
 
-  // month view
+  // month
   const cal = el("div", {class:"cal"});
-  // DOW
   const dows = ["Ma","Di","Wo","Do","Vr","Za","Zo"];
   const dowRow = el("div", {class:"cal-month"});
   dows.forEach(d=>dowRow.appendChild(el("div", {class:"cal-dow"}, d)));
@@ -933,8 +820,7 @@ function buildCalendar(range){
   cal.appendChild(monthGrid);
 
   const first = new Date(range.start);
-  const startDow = (first.getDay()+6)%7; // 0=Mon
-  // Fill leading blanks
+  const startDow = (first.getDay()+6)%7;
   for(let i=0;i<startDow;i++){
     monthGrid.appendChild(el("div", {class:"cal-day", style:"opacity:.35; cursor:default"}, ""));
   }
@@ -942,23 +828,20 @@ function buildCalendar(range){
   const daysInMonth = Math.round((range.end - range.start)/(1000*60*60*24));
   for(let i=0;i<daysInMonth;i++){
     const d = addDays(range.start, i);
-    const date = ymd(d);
+    const key = ymd(d);
     const cell = el("div", {class:"cal-day"});
     cell.appendChild(el("div", {class:"cal-day-num"}, String(d.getDate())));
-
-    const list = (byDate.get(date)||[]).slice(0,3);
+    const list = (byDate.get(key)||[]).slice(0,3);
     list.forEach(({task})=>{
       const chip = el("div", {class:`cal-chip ${statusClass(task)}`}, `${task.title}`);
       chip.onclick = (e)=>{ e.stopPropagation(); switchView("tasks"); openTaskAndScroll(task.id); };
       cell.appendChild(chip);
     });
-
-    const extra = (byDate.get(date)||[]).length - list.length;
+    const extra = (byDate.get(key)||[]).length - list.length;
     if(extra>0){
       cell.appendChild(el("div", {class:"small"}, `+${extra} meer…`));
     }
-
-    cell.onclick = ()=>{ state.planning.zoom = "day"; state.planning.focusDate = date; renderPlanning(); };
+    cell.onclick = ()=>{ state.planning.zoom = "day"; state.planning.focusDate = key; renderPlanning(); };
     monthGrid.appendChild(cell);
   }
 
@@ -967,39 +850,39 @@ function buildCalendar(range){
 
 function buildDayAgenda(range, byDate){
   const date = ymd(range.start);
-  const list = (byDate.get(date)||[]).slice().sort((a,b)=>{
-    const am = a.task.scheduled?.timeblock ? (parseTimeblock(a.task.scheduled.timeblock)?.startMin ?? 0) : 0;
-    const bm = b.task.scheduled?.timeblock ? (parseTimeblock(b.task.scheduled.timeblock)?.startMin ?? 0) : 0;
-    return am - bm;
-  });
+  const list = (byDate.get(date)||[]).slice().sort((a,b)=> a.start - b.start);
 
   const wrap = el("div", {class:"day-agenda"});
   const grid = el("div", {class:"day-grid"});
   wrap.appendChild(grid);
 
-  // hour rows
   for(let h=0;h<24;h++){
-    const row = el("div", {class:"hour-row"}, [
+    grid.appendChild(el("div", {class:"hour-row"}, [
       el("div", {class:"hour-label"}, `${String(h).padStart(2,"0")}:00`),
       el("div", {class:"hour-line"}, "")
-    ]);
-    grid.appendChild(row);
+    ]));
   }
 
   const layer = el("div", {class:"agenda-layer"});
   grid.appendChild(layer);
 
-  const pxPerMin = 56/60; // 56px per hour
-  list.forEach(({task})=>{
-    const tb = parseTimeblock(task.scheduled.timeblock||"");
-    const startMin = tb ? tb.startMin : 9*60;
-    const endMin = tb ? tb.endMin : Math.min(startMin+60, 24*60);
+  const pxPerMin = 56/60;
+  list.forEach(({task, start, end})=>{
+    const dayStart = new Date(range.start);
+    const dayEnd = new Date(range.end);
+    const s = new Date(Math.max(start.getTime(), dayStart.getTime()));
+    const e = new Date(Math.min(end.getTime(), dayEnd.getTime()));
+    const startMin = s.getHours()*60 + s.getMinutes();
+    const endMin = e.getHours()*60 + e.getMinutes();
+
     const top = startMin * pxPerMin;
     const height = Math.max(34, (endMin - startMin) * pxPerMin);
 
+    const exec1 = getPersonName(getExec1(task));
+    const exec2 = getPersonName(getExec2(task));
     const block = el("div", {class:`agenda-block ${statusClass(task)}`, style:`top:${top}px; height:${height}px;`}, [
       el("div", {}, `${fmtDateTime(task.scheduled.start)} → ${fmtDateTime(task.scheduled.end)} — ${task.title}`),
-      el("div", {class:"tiny"}, `${task.id} • ${task.location||"–"} • ${getPersonName(task.owner)}`)
+      el("div", {class:"tiny"}, `${task.location||"–"} • ${exec1}${exec2 && exec2!=="–" ? " + " + exec2 : ""}`)
     ]);
     block.onclick = ()=>{ switchView("tasks"); openTaskAndScroll(task.id); };
     layer.appendChild(block);
@@ -1115,39 +998,30 @@ async function init(){
     saveToStorage();
   }
 
-  // --- Migration (v1.4): date+timeblock -> start/end, owner/assignees -> executors, remove priority ---
-  const tbParse = (tb)=>{
+  // --- Migration (v1.4): scheduled.date/timeblock -> scheduled.start/end (for multi-day planning) ---
+  const parseTB = (tb)=>{
     const m = String(tb||"").trim().match(/(\d{1,2}):(\d{2})\s*[–-]\s*(\d{1,2}):(\d{2})/);
     if(!m) return null;
-    return { sh: Number(m[1]), sm: Number(m[2]), eh: Number(m[3]), em: Number(m[4]) };
+    return {sh:+m[1], sm:+m[2], eh:+m[3], em:+m[4]};
   };
   state.tasks.forEach(t=>{
-    if(!t.executors){
-      t.executors = { exec1: t.owner || "", exec2: (Array.isArray(t.assignees) && t.assignees[0]) ? t.assignees[0] : "" };
-    }
-    if(!t.scheduled) t.scheduled = { start:"", end:"" };
+    if(!t.scheduled) t.scheduled = {date:"", timeblock:"", start:"", end:""};
     if(!t.scheduled.start && t.scheduled.date){
-      const date = t.scheduled.date;
-      const tb = tbParse(t.scheduled.timeblock || "");
+      const tb = parseTB(t.scheduled.timeblock||"");
       const sh = tb ? tb.sh : 9, sm = tb ? tb.sm : 0;
       const eh = tb ? tb.eh : 17, em = tb ? tb.em : 0;
-      const pad = (n)=>String(n).padStart(2,"0");
-      t.scheduled.start = `${date}T${pad(sh)}:${pad(sm)}`;
-      t.scheduled.end = `${date}T${pad(eh)}:${pad(em)}`;
+      const pad=(n)=>String(n).padStart(2,"0");
+      t.scheduled.start = `${t.scheduled.date}T${pad(sh)}:${pad(sm)}`;
+      t.scheduled.end = `${t.scheduled.date}T${pad(eh)}:${pad(em)}`;
     }
     if(!t.scheduled.end && t.scheduled.start){
       try{
         const d = new Date(t.scheduled.start);
         d.setHours(d.getHours()+1);
-        const pad = (n)=>String(n).padStart(2,"0");
+        const pad=(n)=>String(n).padStart(2,"0");
         t.scheduled.end = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
       }catch(e){}
     }
-    delete t.scheduled.date;
-    delete t.scheduled.timeblock;
-    delete t.owner;
-    delete t.assignees;
-    delete t.priority;
   });
 
   wireUI();
