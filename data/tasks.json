@@ -1,0 +1,1415 @@
+[
+  {
+    "id": "OH-BIN-01",
+    "project": "Oud huis",
+    "group": "Binnen",
+    "location": "Hele huis",
+    "type": "Binnen",
+    "category": "Schilderwerk",
+    "title": "Plafonds witten + randjes afwerken (hele huis)",
+    "priority": "Should",
+    "status": "Backlog",
+    "owner": "ian",
+    "assignees": [],
+    "estimate_hours": {
+      "optimistic": 6,
+      "realistic": 10,
+      "worst": 16
+    },
+    "actual_hours": 0,
+    "scheduled": {
+      "date": "",
+      "timeblock": ""
+    },
+    "dependencies": [],
+    "definition_of_done": "Alle plafonds egaal wit, randen strak (geen zichtbare overgangen/rollers).",
+    "materials": [],
+    "tools": [
+      "rollers",
+      "verfbak",
+      "afplaktape",
+      "stucloper/folie",
+      "ontvetter",
+      "schuurpapier"
+    ],
+    "steps": [
+      "Beschermen/afplakken",
+      "Reparaties/plekjes bijwerken",
+      "Voorstrijk (indien nodig)",
+      "Plafonds schilderen",
+      "Randen controleren en bijwerken",
+      "Opruimen/afvoer"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "OH-BIN-02",
+    "project": "Oud huis",
+    "group": "Binnen",
+    "location": "Hele huis",
+    "type": "Binnen",
+    "category": "Afwerking",
+    "title": "Plinten opnieuw plakken + afwerken",
+    "priority": "Should",
+    "status": "Backlog",
+    "owner": "ian",
+    "assignees": [],
+    "estimate_hours": {
+      "optimistic": 4,
+      "realistic": 8,
+      "worst": 12
+    },
+    "actual_hours": 0,
+    "scheduled": {
+      "date": "",
+      "timeblock": ""
+    },
+    "dependencies": [],
+    "definition_of_done": "Alle plinten vast, kieren dicht, afwerking netjes (evt. bijgewerkt/geverfd).",
+    "materials": [
+      "Montagelijm|1-2 kokers|kopen",
+      "Acrylaatkit|1-2 kokers|kopen",
+      "Spijkertjes/brads|optioneel|kijken",
+      "Verf (bijwerken)|-|in huis"
+    ],
+    "tools": [
+      "kitspuit",
+      "afbreekmes",
+      "plamuurmes",
+      "waterpas/laser",
+      "tacker (optioneel)"
+    ],
+    "steps": [
+      "Losse plinten verwijderen/positie check",
+      "Ondergrond schoonmaken",
+      "Plakken/stellen",
+      "Kieren kitten",
+      "Bijwerken/verven",
+      "Opruimen"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "OH-BIN-03",
+    "project": "Oud huis",
+    "group": "Binnen",
+    "location": "Woonkamer",
+    "type": "Binnen",
+    "category": "Schilderwerk",
+    "title": "TV-meubel nalopen + evt. 1x schilderen",
+    "priority": "Could",
+    "status": "Backlog",
+    "owner": "ian",
+    "assignees": [],
+    "estimate_hours": {
+      "optimistic": 1,
+      "realistic": 2,
+      "worst": 4
+    },
+    "actual_hours": 0,
+    "scheduled": {
+      "date": "",
+      "timeblock": ""
+    },
+    "dependencies": [],
+    "definition_of_done": "Strak en dekkend, geen beschadigingen zichtbaar.",
+    "materials": [
+      "Lak (binnen)|-|in huis",
+      "Schuurpapier|P180/P240|in huis"
+    ],
+    "tools": [
+      "kwast",
+      "roller klein"
+    ],
+    "steps": [
+      "Inspectie",
+      "Licht schuren",
+      "Stofvrij maken",
+      "Laklaag",
+      "Controle/bijwerken"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "OH-BIN-04",
+    "project": "Oud huis",
+    "group": "Binnen",
+    "location": "Erker",
+    "type": "Binnen",
+    "category": "Schilderwerk",
+    "title": "Erker: opschuren + schilderen (binnen kozijnen + plank)",
+    "priority": "Should",
+    "status": "Backlog",
+    "owner": "ian",
+    "assignees": [],
+    "estimate_hours": {
+      "optimistic": 3,
+      "realistic": 5,
+      "worst": 8
+    },
+    "actual_hours": 0,
+    "scheduled": {
+      "date": "",
+      "timeblock": ""
+    },
+    "dependencies": [],
+    "definition_of_done": "Glad, dekkend, nette randen op kozijnen en plank.",
+    "materials": [
+      "Lak (binnen)|-|in huis",
+      "Ontvetter|1|kopen"
+    ],
+    "tools": [
+      "schuurmachine (optioneel)",
+      "kwast",
+      "roller klein",
+      "afplaktape"
+    ],
+    "steps": [
+      "Ontvetten",
+      "Schuren",
+      "Stofvrij",
+      "Laklaag 1",
+      "(Droog)",
+      "Laklaag 2/bijwerken"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "OH-BIN-05",
+    "project": "Oud huis",
+    "group": "Binnen",
+    "location": "Hele huis",
+    "type": "Binnen",
+    "category": "Schilderwerk",
+    "title": "Deuren + deurposten + kozijnen binnen: plekjes bijwerken / lik verf",
+    "priority": "Should",
+    "status": "Backlog",
+    "owner": "ian",
+    "assignees": [],
+    "estimate_hours": {
+      "optimistic": 6,
+      "realistic": 12,
+      "worst": 20
+    },
+    "actual_hours": 0,
+    "scheduled": {
+      "date": "",
+      "timeblock": ""
+    },
+    "dependencies": [],
+    "definition_of_done": "Geen zichtbare schade/plekjes; consistente finish.",
+    "materials": [
+      "Lak (binnen)|-|in huis",
+      "Plamuur/houtvuller|1|kopen",
+      "Ontvetter|1|kopen"
+    ],
+    "tools": [
+      "kwasten",
+      "rollers",
+      "schuurpapier",
+      "afplaktape"
+    ],
+    "steps": [
+      "Ronde door huis: markeer plekjes",
+      "Ontvetten",
+      "Schuren",
+      "Vullen/repareren",
+      "Lak/bijwerken",
+      "Nacontrole"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "OH-BIN-06",
+    "project": "Oud huis",
+    "group": "Binnen",
+    "location": "Trap",
+    "type": "Binnen",
+    "category": "Reparatie/Schilderwerk",
+    "title": "Trap: stootplekjes repareren + schilderen",
+    "priority": "Should",
+    "status": "Backlog",
+    "owner": "ian",
+    "assignees": [],
+    "estimate_hours": {
+      "optimistic": 3,
+      "realistic": 6,
+      "worst": 10
+    },
+    "actual_hours": 0,
+    "scheduled": {
+      "date": "",
+      "timeblock": ""
+    },
+    "dependencies": [],
+    "definition_of_done": "Trap oogt netjes; geen chips/krassen zichtbaar.",
+    "materials": [
+      "Houtvuller/reparatiepasta|1|kopen",
+      "Traplak/verf|1|kopen"
+    ],
+    "tools": [
+      "plamuurmes",
+      "schuurpapier",
+      "kwast/roller"
+    ],
+    "steps": [
+      "Schade markeren",
+      "Vullen",
+      "Schuren",
+      "Stofvrij",
+      "Schilderen",
+      "Controle"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "OH-BIN-07",
+    "project": "Oud huis",
+    "group": "Binnen",
+    "location": "Bovenaan trap",
+    "type": "Binnen",
+    "category": "Gips/Afwerking",
+    "title": "Nieuw stukje gipsmuur bij leuning verwerken",
+    "priority": "Should",
+    "status": "Backlog",
+    "owner": "ian",
+    "assignees": [],
+    "estimate_hours": {
+      "optimistic": 2,
+      "realistic": 4,
+      "worst": 7
+    },
+    "actual_hours": 0,
+    "scheduled": {
+      "date": "",
+      "timeblock": ""
+    },
+    "dependencies": [],
+    "definition_of_done": "Vlak en naadloos; geschuurd en geverfd.",
+    "materials": [
+      "Gipsplaat (stuk)|1|kopen",
+      "Schroeven/pluggen|-|kopen",
+      "Gaasband|1|kopen",
+      "Stuc/finish|1|kopen",
+      "Verf|-|in huis"
+    ],
+    "tools": [
+      "boor/schroefmachine",
+      "stanleymes",
+      "plamuurmessen",
+      "schuurpapier"
+    ],
+    "steps": [
+      "Maat opnemen",
+      "Plaat snijden en monteren",
+      "Naden gaas+finish",
+      "Schuren",
+      "Verven"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "OH-BIN-08",
+    "project": "Oud huis",
+    "group": "Binnen",
+    "location": "Badkamer/wasruimte",
+    "type": "Binnen",
+    "category": "Schilderwerk",
+    "title": "Wasmeubel afwerken: MDF schilderen",
+    "priority": "Could",
+    "status": "Backlog",
+    "owner": "ian",
+    "assignees": [],
+    "estimate_hours": {
+      "optimistic": 2,
+      "realistic": 3,
+      "worst": 6
+    },
+    "actual_hours": 0,
+    "scheduled": {
+      "date": "",
+      "timeblock": ""
+    },
+    "dependencies": [],
+    "definition_of_done": "MDF strak en dekkend; nette hoeken.",
+    "materials": [
+      "MDF-primer|1|kopen",
+      "Lak (binnen)|-|in huis",
+      "Schuurpapier|P180/P240|in huis"
+    ],
+    "tools": [
+      "kwast/roller klein",
+      "afplaktape"
+    ],
+    "steps": [
+      "Ontstoffen",
+      "Primer",
+      "Licht schuren",
+      "Laklaag",
+      "Bijwerken"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "OH-BIN-09",
+    "project": "Oud huis",
+    "group": "Binnen",
+    "location": "Keuken",
+    "type": "Binnen",
+    "category": "Afwerking",
+    "title": "Keuken: stopcontacten mooi afwerken",
+    "priority": "Must",
+    "status": "Backlog",
+    "owner": "ian",
+    "assignees": [],
+    "estimate_hours": {
+      "optimistic": 1,
+      "realistic": 2,
+      "worst": 4
+    },
+    "actual_hours": 0,
+    "scheduled": {
+      "date": "",
+      "timeblock": ""
+    },
+    "dependencies": [],
+    "definition_of_done": "Strak, recht; geen kieren/rafels; showroom-look.",
+    "materials": [
+      "Afdekraampjes (indien nodig)|-|kijken",
+      "Acrylaatkit/vulmiddel|1|kopen",
+      "Verf (bijwerken)|-|in huis"
+    ],
+    "tools": [
+      "schroevendraaier",
+      "plamuurmes",
+      "stanleymes",
+      "kwast klein"
+    ],
+    "steps": [
+      "Loshalen",
+      "Randen netjes maken/vullen",
+      "Drogen",
+      "Schuren",
+      "Afmonteren",
+      "Verf bijwerken"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "OH-BIN-10",
+    "project": "Oud huis",
+    "group": "Binnen",
+    "location": "Keuken",
+    "type": "Binnen",
+    "category": "Montage/Afwerking",
+    "title": "Keuken: panelen/zijpanelen vastschroeven + uitlijnen + afwerken",
+    "priority": "Must",
+    "status": "Backlog",
+    "owner": "ian",
+    "assignees": [],
+    "estimate_hours": {
+      "optimistic": 2,
+      "realistic": 4,
+      "worst": 7
+    },
+    "actual_hours": 0,
+    "scheduled": {
+      "date": "",
+      "timeblock": ""
+    },
+    "dependencies": [],
+    "definition_of_done": "Panelen strak uitgelijnd, stevig, nette naden.",
+    "materials": [
+      "Schroeven|-|kopen",
+      "Hoekjes/stripjes (indien nodig)|-|kijken",
+      "Kit/vulmiddel|1|kopen"
+    ],
+    "tools": [
+      "boor/schroefmachine",
+      "waterpas/laser",
+      "meetlint"
+    ],
+    "steps": [
+      "Check uitlijning",
+      "Voorboren (indien nodig)",
+      "Vastzetten",
+      "Naden/afwerking",
+      "Eindcontrole"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "OH-BIN-11",
+    "project": "Oud huis",
+    "group": "Binnen",
+    "location": "Keuken",
+    "type": "Binnen",
+    "category": "Afstelling/Afwerking",
+    "title": "Keuken: lades 1x strak afwerken/afstellen",
+    "priority": "Must",
+    "status": "Backlog",
+    "owner": "ian",
+    "assignees": [],
+    "estimate_hours": {
+      "optimistic": 2,
+      "realistic": 4,
+      "worst": 7
+    },
+    "actual_hours": 0,
+    "scheduled": {
+      "date": "",
+      "timeblock": ""
+    },
+    "dependencies": [
+      "OH-BIN-10"
+    ],
+    "definition_of_done": "Alles loopt soepel; fronten recht; lijnen strak.",
+    "materials": [],
+    "tools": [
+      "schroevendraaiers",
+      "inbussleutels (indien nodig)",
+      "waterpas"
+    ],
+    "steps": [
+      "Alle lades langs",
+      "Afstellen fronten",
+      "Loop controleren",
+      "Schroeven nalopen",
+      "Eindfoto"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "OH-BIN-12",
+    "project": "Oud huis",
+    "group": "Binnen",
+    "location": "Badkamer",
+    "type": "Binnen",
+    "category": "Installatie",
+    "title": "Badkamermeubel vervangen (meubel + spiegel + kraan + rondom)",
+    "priority": "Must",
+    "status": "Backlog",
+    "owner": "ian",
+    "assignees": [],
+    "estimate_hours": {
+      "optimistic": 6,
+      "realistic": 10,
+      "worst": 16
+    },
+    "actual_hours": 0,
+    "scheduled": {
+      "date": "",
+      "timeblock": ""
+    },
+    "dependencies": [],
+    "definition_of_done": "Alles werkt; waterdicht; strak afgekit; stevig gemonteerd.",
+    "materials": [
+      "Badkamermeubel|1|kopen",
+      "Spiegel|1|kopen",
+      "Kraan|1|kopen",
+      "Sifon/afvoer|1|kijken",
+      "Siliconenkit (schimmelwerend)|1|kopen",
+      "Pluggen/schroeven|-|kopen",
+      "Aansluitslangen (indien nodig)|-|kijken"
+    ],
+    "tools": [
+      "waterpomptang",
+      "steeksleutels",
+      "boor",
+      "kitspuit",
+      "waterpas"
+    ],
+    "steps": [
+      "Water afsluiten",
+      "Demonteren oud",
+      "Maatvoering check",
+      "Monteren nieuw meubel",
+      "Aansluiten kraan/afvoer",
+      "Test op lekkage",
+      "Afkitten",
+      "Opruimen"
+    ],
+    "notes": "Let op droogtijd kit."
+  },
+  {
+    "id": "OH-BIN-13",
+    "project": "Oud huis",
+    "group": "Binnen",
+    "location": "Badkamer",
+    "type": "Binnen",
+    "category": "Montage",
+    "title": "Badkamer radiator opnieuw netjes ophangen + aansluitingen netjes",
+    "priority": "Should",
+    "status": "Backlog",
+    "owner": "ian",
+    "assignees": [],
+    "estimate_hours": {
+      "optimistic": 2,
+      "realistic": 4,
+      "worst": 7
+    },
+    "actual_hours": 0,
+    "scheduled": {
+      "date": "",
+      "timeblock": ""
+    },
+    "dependencies": [],
+    "definition_of_done": "Radiator stevig en recht; aansluitingen netjes; geen lekkage.",
+    "materials": [
+      "Beugels/ophangmateriaal (indien nodig)|-|kijken",
+      "Teflontape/afdichting (indien nodig)|-|kijken"
+    ],
+    "tools": [
+      "waterpas",
+      "sleutels",
+      "ontluchtingssleutel"
+    ],
+    "steps": [
+      "Ophangpunten bepalen",
+      "Monteren",
+      "Aansluitingen controleren",
+      "Ontluchten",
+      "Test"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "OH-BIN-14",
+    "project": "Oud huis",
+    "group": "Binnen",
+    "location": "Lichtkoepel",
+    "type": "Binnen",
+    "category": "Schoonmaak",
+    "title": "Lichtkoepel binnenkant volledig schoonmaken",
+    "priority": "Should",
+    "status": "Backlog",
+    "owner": "ian",
+    "assignees": [],
+    "estimate_hours": {
+      "optimistic": 0.5,
+      "realistic": 1,
+      "worst": 2
+    },
+    "actual_hours": 0,
+    "scheduled": {
+      "date": "",
+      "timeblock": ""
+    },
+    "dependencies": [],
+    "definition_of_done": "Helder en streeploos; geen vuilranden.",
+    "materials": [
+      "Glasreiniger|1|kopen",
+      "Microvezeldoeken|2|in huis"
+    ],
+    "tools": [
+      "trapje/ladder"
+    ],
+    "steps": [
+      "Beschermen ondergrond",
+      "Schoonmaken",
+      "Nadrogen",
+      "Controle in daglicht"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "OH-BIN-15",
+    "project": "Oud huis",
+    "group": "Binnen",
+    "location": "Gang",
+    "type": "Binnen",
+    "category": "Elektra",
+    "title": "Lamp gang (fix/ophangen/afwerken)",
+    "priority": "Should",
+    "status": "Backlog",
+    "owner": "ian",
+    "assignees": [],
+    "estimate_hours": {
+      "optimistic": 0.5,
+      "realistic": 1,
+      "worst": 2
+    },
+    "actual_hours": 0,
+    "scheduled": {
+      "date": "",
+      "timeblock": ""
+    },
+    "dependencies": [],
+    "definition_of_done": "Lamp werkt; netjes gemonteerd; geen losse kabels.",
+    "materials": [
+      "Lamp/onderdelen|1|kijken"
+    ],
+    "tools": [
+      "spanningszoeker",
+      "schroevendraaier",
+      "ladder"
+    ],
+    "steps": [
+      "Stroom uit",
+      "Monteren",
+      "Test",
+      "Afwerken"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "OH-BIN-16",
+    "project": "Oud huis",
+    "group": "Binnen",
+    "location": "Gang",
+    "type": "Binnen",
+    "category": "Schilderwerk",
+    "title": "Plafond gang nalopen (meestal onderdeel van plafonds)",
+    "priority": "Could",
+    "status": "Backlog",
+    "owner": "ian",
+    "assignees": [],
+    "estimate_hours": {
+      "optimistic": 1,
+      "realistic": 2,
+      "worst": 3
+    },
+    "actual_hours": 0,
+    "scheduled": {
+      "date": "",
+      "timeblock": ""
+    },
+    "dependencies": [
+      "OH-BIN-01"
+    ],
+    "definition_of_done": "Gangplafond strak wit/afgewerkt.",
+    "materials": [],
+    "tools": [],
+    "steps": [
+      "Opnemen in plafonds-ronde of als touch-up"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "OH-BIN-17",
+    "project": "Oud huis",
+    "group": "Binnen",
+    "location": "Achterzijde raam",
+    "type": "Binnen",
+    "category": "Presentatie",
+    "title": "Gordijn/lamellen achterzijde raam: netjes maken (ophangen/repareren/vervangen)",
+    "priority": "Should",
+    "status": "Backlog",
+    "owner": "ian",
+    "assignees": [],
+    "estimate_hours": {
+      "optimistic": 0.5,
+      "realistic": 1.5,
+      "worst": 3
+    },
+    "actual_hours": 0,
+    "scheduled": {
+      "date": "",
+      "timeblock": ""
+    },
+    "dependencies": [],
+    "definition_of_done": "Raambekleding functioneel en netjes; geen rommelige indruk.",
+    "materials": [
+      "Onderdelen (haakjes/geleiders)|-|kijken"
+    ],
+    "tools": [
+      "schroevendraaier",
+      "boor (optioneel)",
+      "ladder"
+    ],
+    "steps": [
+      "Bepaal wat er mis is",
+      "Fix/monteer",
+      "Test openen/sluiten",
+      "Afwerken"
+    ],
+    "notes": "Maak concreet: wat moet er precies gebeuren?"
+  },
+  {
+    "id": "OH-BIN-18",
+    "project": "Oud huis",
+    "group": "Binnen",
+    "location": "Plafonds",
+    "type": "Binnen",
+    "category": "Afwerking",
+    "title": "Schroefjes in plafond afwerken",
+    "priority": "Should",
+    "status": "Backlog",
+    "owner": "ian",
+    "assignees": [],
+    "estimate_hours": {
+      "optimistic": 0.5,
+      "realistic": 1,
+      "worst": 2
+    },
+    "actual_hours": 0,
+    "scheduled": {
+      "date": "",
+      "timeblock": ""
+    },
+    "dependencies": [
+      "OH-BIN-01"
+    ],
+    "definition_of_done": "Alles vlak weggewerkt en wit bijgewerkt.",
+    "materials": [
+      "Plamuur|1|kopen",
+      "Verf wit| - |in huis"
+    ],
+    "tools": [
+      "plamuurmes",
+      "schuurpapier",
+      "kwast klein"
+    ],
+    "steps": [
+      "Vullen",
+      "Drogen",
+      "Schuren",
+      "Bijwerken verf"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "OH-BIN-19",
+    "project": "Oud huis",
+    "group": "Binnen",
+    "location": "Hele huis",
+    "type": "Binnen",
+    "category": "Schilderwerk",
+    "title": "Muren checken + waar nodig bijwerken/schilderen",
+    "priority": "Should",
+    "status": "Backlog",
+    "owner": "ian",
+    "assignees": [],
+    "estimate_hours": {
+      "optimistic": 3,
+      "realistic": 6,
+      "worst": 12
+    },
+    "actual_hours": 0,
+    "scheduled": {
+      "date": "",
+      "timeblock": ""
+    },
+    "dependencies": [],
+    "definition_of_done": "Geen zichtbare vlekken/plekken; egaal en fris.",
+    "materials": [
+      "Muurverf (bijwerken)|-|in huis",
+      "Plamuur|1|kopen"
+    ],
+    "tools": [
+      "roller",
+      "kwast",
+      "schuurpapier"
+    ],
+    "steps": [
+      "Ronde met post-its: plekjes markeren",
+      "Vullen/schuren",
+      "Bijwerken verf",
+      "Eindcontrole in daglicht"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "OH-BIN-20",
+    "project": "Oud huis",
+    "group": "Binnen",
+    "location": "Kamer Benja",
+    "type": "Binnen",
+    "category": "Reparatie",
+    "title": "Raamhendel/raamslot vervangen",
+    "priority": "Should",
+    "status": "Backlog",
+    "owner": "ian",
+    "assignees": [],
+    "estimate_hours": {
+      "optimistic": 0.5,
+      "realistic": 1,
+      "worst": 2
+    },
+    "actual_hours": 0,
+    "scheduled": {
+      "date": "",
+      "timeblock": ""
+    },
+    "dependencies": [],
+    "definition_of_done": "Hendel/slot werkt soepel en zit stevig.",
+    "materials": [
+      "Raamhendel/slot passend|1|kopen"
+    ],
+    "tools": [
+      "schroevendraaier",
+      "meetlint"
+    ],
+    "steps": [
+      "Type/maat bepalen",
+      "Oud demonteren",
+      "Nieuw monteren",
+      "Test"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "OH-BIN-21",
+    "project": "Oud huis",
+    "group": "Binnen",
+    "location": "Voorzijde ramen",
+    "type": "Binnen",
+    "category": "Schilderwerk",
+    "title": "Binnenzijde raamkozijnen voorkant: schoon + lik verf",
+    "priority": "Should",
+    "status": "Backlog",
+    "owner": "ian",
+    "assignees": [],
+    "estimate_hours": {
+      "optimistic": 2,
+      "realistic": 4,
+      "worst": 7
+    },
+    "actual_hours": 0,
+    "scheduled": {
+      "date": "",
+      "timeblock": ""
+    },
+    "dependencies": [],
+    "definition_of_done": "Kozijnen fris en dekkend; geen grauwheid/plekken.",
+    "materials": [
+      "Ontvetter|1|kopen",
+      "Lak (binnen)|-|in huis"
+    ],
+    "tools": [
+      "kwast",
+      "schuurpapier",
+      "afplaktape"
+    ],
+    "steps": [
+      "Ontvetten",
+      "Schuren",
+      "Stofvrij",
+      "Laklaag",
+      "Nacontrole"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "OH-BIN-22",
+    "project": "Oud huis",
+    "group": "Binnen",
+    "location": "Gang/plafond",
+    "type": "Binnen",
+    "category": "Afwerking",
+    "title": "Plafondkapje vervangen (vergeeld → nieuw wit)",
+    "priority": "Could",
+    "status": "Backlog",
+    "owner": "ian",
+    "assignees": [],
+    "estimate_hours": {
+      "optimistic": 0.25,
+      "realistic": 0.5,
+      "worst": 1
+    },
+    "actual_hours": 0,
+    "scheduled": {
+      "date": "",
+      "timeblock": ""
+    },
+    "dependencies": [],
+    "definition_of_done": "Nieuw kapje zit strak en netjes gemonteerd.",
+    "materials": [
+      "Plafondkapje wit|1|in huis"
+    ],
+    "tools": [
+      "ladder",
+      "schroevendraaier"
+    ],
+    "steps": [
+      "Stroom uit",
+      "Oud kapje verwijderen",
+      "Nieuw plaatsen",
+      "Test"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "OH-PRE-01",
+    "project": "Oud huis",
+    "group": "Pre-verkoop",
+    "location": "Woonkamer",
+    "type": "Logistiek",
+    "category": "Verhuizen",
+    "title": "Piano vooraf verhuizen",
+    "priority": "Must",
+    "status": "Backlog",
+    "owner": "ian",
+    "assignees": [],
+    "estimate_hours": {
+      "optimistic": 1,
+      "realistic": 2,
+      "worst": 4
+    },
+    "actual_hours": 0,
+    "scheduled": {
+      "date": "",
+      "timeblock": ""
+    },
+    "dependencies": [],
+    "definition_of_done": "Piano weg uit huis; vloer/wand netjes achtergelaten.",
+    "materials": [
+      "Dekens/spanbanden| - |kijken"
+    ],
+    "tools": [
+      "steekwagen (optioneel)",
+      "handschoenen"
+    ],
+    "steps": [
+      "Tilteam regelen",
+      "Route vrijmaken",
+      "Transport",
+      "Plaatsing",
+      "Controle schade",
+      "Opruimen"
+    ],
+    "notes": "Overweeg piano-slee/transportdekens."
+  },
+  {
+    "id": "OH-PRE-02",
+    "project": "Oud huis",
+    "group": "Pre-verkoop",
+    "location": "Woonkamer",
+    "type": "Logistiek",
+    "category": "Verplaatsen",
+    "title": "Box vooraf verplaatsen/verhuizen",
+    "priority": "Must",
+    "status": "Backlog",
+    "owner": "ian",
+    "assignees": [],
+    "estimate_hours": {
+      "optimistic": 0.5,
+      "realistic": 1,
+      "worst": 2
+    },
+    "actual_hours": 0,
+    "scheduled": {
+      "date": "",
+      "timeblock": ""
+    },
+    "dependencies": [],
+    "definition_of_done": "Box uit zicht/weg; plek opgeruimd.",
+    "materials": [],
+    "tools": [],
+    "steps": [
+      "Bepaal bestemming",
+      "Verplaatsen",
+      "Plek netjes maken"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "OH-PRE-03",
+    "project": "Oud huis",
+    "group": "Pre-verkoop",
+    "location": "Achterkamer",
+    "type": "Binnen",
+    "category": "Opruimen",
+    "title": "Kasten achterkamer opruimen/uitzoeken",
+    "priority": "Must",
+    "status": "Backlog",
+    "owner": "ian",
+    "assignees": [],
+    "estimate_hours": {
+      "optimistic": 2,
+      "realistic": 4,
+      "worst": 8
+    },
+    "actual_hours": 0,
+    "scheduled": {
+      "date": "",
+      "timeblock": ""
+    },
+    "dependencies": [],
+    "definition_of_done": "Kasten verkoopproof: overzichtelijk, geen rommelige indruk.",
+    "materials": [
+      "Labeltape/markers| - |kijken",
+      "Vuilniszakken| - |kopen",
+      "Opbergboxen| - |kijken"
+    ],
+    "tools": [],
+    "steps": [
+      "Alles eruit (per kast)",
+      "Sorteren: bewaren/weg/naar nieuw huis",
+      "Inpakken/labelen",
+      "Terugzetten: lucht/ruimte",
+      "Afval weg"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "OH-PRE-04",
+    "project": "Oud huis",
+    "group": "Pre-verkoop",
+    "location": "Keuken",
+    "type": "Binnen",
+    "category": "Opruimen",
+    "title": "Voorraadkast keuken opruimen",
+    "priority": "Must",
+    "status": "Backlog",
+    "owner": "ian",
+    "assignees": [],
+    "estimate_hours": {
+      "optimistic": 1,
+      "realistic": 2,
+      "worst": 4
+    },
+    "actual_hours": 0,
+    "scheduled": {
+      "date": "",
+      "timeblock": ""
+    },
+    "dependencies": [],
+    "definition_of_done": "Netjes en overzichtelijk; niet overvol; schappen schoon.",
+    "materials": [
+      "Vuilniszakken| - |kopen",
+      "Bakjes/mandjes (optioneel)| - |kijken"
+    ],
+    "tools": [
+      "doekjes"
+    ],
+    "steps": [
+      "Houdbaarheidscheck",
+      "Sorteren",
+      "Schoonmaken schappen",
+      "Netjes terugplaatsen"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "OH-PRE-05",
+    "project": "Oud huis",
+    "group": "Pre-verkoop",
+    "location": "Zolder",
+    "type": "Binnen",
+    "category": "Opruimen",
+    "title": "Zolder opruimen/uitzoeken",
+    "priority": "Must",
+    "status": "Backlog",
+    "owner": "ian",
+    "assignees": [],
+    "estimate_hours": {
+      "optimistic": 3,
+      "realistic": 6,
+      "worst": 12
+    },
+    "actual_hours": 0,
+    "scheduled": {
+      "date": "",
+      "timeblock": ""
+    },
+    "dependencies": [],
+    "definition_of_done": "Looppad vrij; spullen geclusterd/in boxen; zolder oogt ruim en veilig.",
+    "materials": [
+      "Opbergboxen| - |kijken",
+      "Labeltape| - |kijken",
+      "Vuilniszakken| - |kopen"
+    ],
+    "tools": [],
+    "steps": [
+      "Zone indelen",
+      "Sorteren per categorie",
+      "Inpakken + labelen",
+      "Stapelen/wegzetten",
+      "Afval weg",
+      "Eindfoto"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "OH-BUI-01",
+    "project": "Oud huis",
+    "group": "Buiten",
+    "location": "Hokje",
+    "type": "Buiten",
+    "category": "Schilderwerk",
+    "title": "Hokje: deur + kozijnen schilderen",
+    "priority": "Should",
+    "status": "Backlog",
+    "owner": "ian",
+    "assignees": [],
+    "estimate_hours": {
+      "optimistic": 2,
+      "realistic": 4,
+      "worst": 7
+    },
+    "actual_hours": 0,
+    "scheduled": {
+      "date": "",
+      "timeblock": ""
+    },
+    "dependencies": [],
+    "definition_of_done": "Dekkend en strak; buitenbestendig; geen druipers.",
+    "materials": [
+      "Buitenlak|1|kopen",
+      "Primer (indien nodig)|1|kijken",
+      "Ontvetter|1|kopen"
+    ],
+    "tools": [
+      "kwast",
+      "roller",
+      "schuurpapier",
+      "afplaktape"
+    ],
+    "steps": [
+      "Ontvetten",
+      "Schuren",
+      "Stofvrij",
+      "Laklaag 1",
+      "Laklaag 2",
+      "Controle"
+    ],
+    "notes": "Plan op droge dag."
+  },
+  {
+    "id": "OH-BUI-02",
+    "project": "Oud huis",
+    "group": "Buiten",
+    "location": "Achterzijde ramen",
+    "type": "Buiten",
+    "category": "Timmer/Schilderwerk",
+    "title": "Achterruit kozijnen: schuren + schilderen + neuslatten inzetten",
+    "priority": "Should",
+    "status": "Backlog",
+    "owner": "ian",
+    "assignees": [],
+    "estimate_hours": {
+      "optimistic": 4,
+      "realistic": 8,
+      "worst": 14
+    },
+    "actual_hours": 0,
+    "scheduled": {
+      "date": "",
+      "timeblock": ""
+    },
+    "dependencies": [],
+    "definition_of_done": "Neuslatten strak; lak netjes; geen houtrot-look; alles dekkend.",
+    "materials": [
+      "Neuslatten| - |kopen",
+      "Buitenlak|1|kopen",
+      "Kit (buiten)|1|kijken",
+      "Schroeven/spijkers| - |kopen"
+    ],
+    "tools": [
+      "zaag",
+      "boor",
+      "hamer",
+      "kwast",
+      "schuurpapier",
+      "ladder"
+    ],
+    "steps": [
+      "Inspectie/rot check",
+      "Oud verwijderen (indien nodig)",
+      "Neuslatten op maat",
+      "Bevestigen",
+      "Schuren/ontvetten",
+      "Schilderen",
+      "Controle"
+    ],
+    "notes": "Weer + droogtijd."
+  },
+  {
+    "id": "OH-BUI-03",
+    "project": "Oud huis",
+    "group": "Buiten",
+    "location": "Achterdeur",
+    "type": "Buiten",
+    "category": "Schilderwerk",
+    "title": "Achterdeur mogelijk nog 1x schilderen",
+    "priority": "Could",
+    "status": "Backlog",
+    "owner": "ian",
+    "assignees": [],
+    "estimate_hours": {
+      "optimistic": 1,
+      "realistic": 2,
+      "worst": 4
+    },
+    "actual_hours": 0,
+    "scheduled": {
+      "date": "",
+      "timeblock": ""
+    },
+    "dependencies": [],
+    "definition_of_done": "Dekkend en strak; randen netjes.",
+    "materials": [
+      "Buitenlak| - |kijken"
+    ],
+    "tools": [
+      "kwast",
+      "schuurpapier"
+    ],
+    "steps": [
+      "Ontvetten",
+      "Schuren",
+      "Lak"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "OH-BUI-04",
+    "project": "Oud huis",
+    "group": "Buiten",
+    "location": "Voordeur",
+    "type": "Buiten",
+    "category": "Schilderwerk",
+    "title": "Voordeurdrempel in de verf",
+    "priority": "Should",
+    "status": "Backlog",
+    "owner": "ian",
+    "assignees": [],
+    "estimate_hours": {
+      "optimistic": 0.5,
+      "realistic": 1,
+      "worst": 2
+    },
+    "actual_hours": 0,
+    "scheduled": {
+      "date": "",
+      "timeblock": ""
+    },
+    "dependencies": [],
+    "definition_of_done": "Slijtvast en netjes; geen kale plekken.",
+    "materials": [
+      "Slijtvaste buitenverf|1|kopen",
+      "Ontvetter|1|kopen"
+    ],
+    "tools": [
+      "kwast klein",
+      "schuurpapier"
+    ],
+    "steps": [
+      "Ontvetten",
+      "Schuren",
+      "Verflaag",
+      "Controle"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "OH-BUI-05",
+    "project": "Oud huis",
+    "group": "Buiten",
+    "location": "Gevel",
+    "type": "Buiten",
+    "category": "Schilderwerk",
+    "title": "Brievenbus buitenkant opnieuw in de verf",
+    "priority": "Could",
+    "status": "Backlog",
+    "owner": "ian",
+    "assignees": [],
+    "estimate_hours": {
+      "optimistic": 0.5,
+      "realistic": 1,
+      "worst": 2
+    },
+    "actual_hours": 0,
+    "scheduled": {
+      "date": "",
+      "timeblock": ""
+    },
+    "dependencies": [],
+    "definition_of_done": "Strak; roest/vlekvrij; dekkend.",
+    "materials": [
+      "Metaalverf/lak|1|kopen"
+    ],
+    "tools": [
+      "schuurpapier",
+      "kwast"
+    ],
+    "steps": [
+      "Schuren/ontvetten",
+      "Verf"
+    ],
+    "notes": ""
+  },
+  {
+    "id": "OH-BUI-06",
+    "project": "Oud huis",
+    "group": "Buiten",
+    "location": "Dakkapellen",
+    "type": "Buiten",
+    "category": "Schilderwerk",
+    "title": "Voor- en achterdakkapel: zijpanelen (1 of beide) in de verf",
+    "priority": "Should",
+    "status": "Backlog",
+    "owner": "ian",
+    "assignees": [],
+    "estimate_hours": {
+      "optimistic": 3,
+      "realistic": 6,
+      "worst": 10
+    },
+    "actual_hours": 0,
+    "scheduled": {
+      "date": "",
+      "timeblock": ""
+    },
+    "dependencies": [],
+    "definition_of_done": "Egale dekking; geen kleurverschil; netjes afgewerkt.",
+    "materials": [
+      "Buitenlak|1|kopen",
+      "Primer (indien nodig)|1|kijken"
+    ],
+    "tools": [
+      "ladder/steiger (veilig)",
+      "kwast",
+      "schuurpapier"
+    ],
+    "steps": [
+      "Veiligheid op orde",
+      "Ontvetten",
+      "Schuren",
+      "Schilderen",
+      "Controle"
+    ],
+    "notes": "Let op veiligheid/hoogte."
+  },
+  {
+    "id": "OH-BUI-07",
+    "project": "Oud huis",
+    "group": "Buiten",
+    "location": "Dakkapel voorkant",
+    "type": "Buiten",
+    "category": "Herstel",
+    "title": "Dakkapel voorkant: teperen/bijwerken",
+    "priority": "Could",
+    "status": "Backlog",
+    "owner": "ian",
+    "assignees": [],
+    "estimate_hours": {
+      "optimistic": 1,
+      "realistic": 3,
+      "worst": 6
+    },
+    "actual_hours": 0,
+    "scheduled": {
+      "date": "",
+      "timeblock": ""
+    },
+    "dependencies": [],
+    "definition_of_done": "Herstel strak; geen scheuren/losse stukken zichtbaar.",
+    "materials": [
+      "Reparatiemiddel (afhankelijk van klus)| - |kijken"
+    ],
+    "tools": [
+      "plamuurmes",
+      "schuurpapier",
+      "kwast"
+    ],
+    "steps": [
+      "Bepaal wat nodig is",
+      "Repareren",
+      "Schuren",
+      "Bijwerken"
+    ],
+    "notes": "Maak concreet wat 'teperen' hier betekent."
+  }
+]
