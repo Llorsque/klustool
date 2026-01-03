@@ -141,7 +141,7 @@ function renderDashboard(){
   const tbody = document.querySelector("#table-upcoming tbody");
   tbody.innerHTML = "";
   if(upcoming.length === 0){
-    tbody.appendChild(el("tr", {}, [
+    tbody.appendChild(el("tr", {class:"clickrow", onclick:(e)=>{ if(e.target && (e.target.tagName==="A" || e.target.closest("a"))) return; openTaskAndScroll(t.id);} }, [
       el("td", {colspan:"7", class:"muted"}, "Nog geen klussen ingepland. Tip: plan eerst OH-PRE (presentatie) en de Must-keukenpunten.")
     ]));
     return;
@@ -156,14 +156,14 @@ function renderDashboard(){
 
     const planned = t.scheduled?.date ? `${t.scheduled.date} ${t.scheduled.timeblock||""}`.trim() : "–";
 
-    tbody.appendChild(el("tr", {}, [
+    tbody.appendChild(el("tr", {class:"clickrow", onclick:(e)=>{ if(e.target && (e.target.tagName==="A" || e.target.closest("a"))) return; switchView("tasks"); openTaskAndScroll(t.id);} }, [
       el("td", {}, t.id),
       el("td", {}, t.title),
       el("td", {}, t.location || "–"),
       el("td", {}, statusCell),
       el("td", {}, planned),
       el("td", {}, getPersonName(t.owner)),
-      el("td", {}, el("a", {class:"action-link", href:"#", onclick:(e)=>{e.preventDefault(); switchView("tasks"); openTask(t.id);} }, "Open"))
+      el("td", {}, el("a", {class:"action-link", href:"#", onclick:(e)=>{e.preventDefault(); switchView("tasks"); openTaskAndScroll(t.id);} }, "Open"))
     ]));
   });
 }
@@ -268,7 +268,7 @@ function renderTasks(){
       el("td", {}, assigned),
       el("td", {}, fmtHours(t.estimate_hours?.realistic)),
       el("td", {class:"small"}, planned),
-      el("td", {}, el("a", {class:"action-link", href:"#", onclick:(e)=>{e.preventDefault(); openTask(t.id);} }, "Open"))
+      el("td", {}, el("a", {class:"action-link", href:"#", onclick:(e)=>{e.preventDefault(); openTaskAndScroll(t.id);} }, "Open"))
     ]));
   });
 
@@ -314,6 +314,15 @@ function generateTaskId(prefix){
     if(!existing.has(id)) return id;
     n++;
   }
+}
+
+function openTaskAndScroll(taskId){
+  openTask(taskId);
+  const drawer = document.getElementById("drawer");
+  drawer.scrollIntoView({behavior:"smooth", block:"start"});
+  // focus first field
+  const title = document.getElementById("f-title");
+  if(title) title.focus();
 }
 
 function openTask(taskId){
@@ -619,7 +628,7 @@ function addTask(){
   state.tasks.push(t);
   saveToStorage();
   switchView("tasks");
-  openTask(t.id);
+  openTaskAndScroll(t.id);
   renderTasks();
   renderDashboard();
 }

@@ -40,3 +40,8 @@ Installeer *Live Server* en open `index.html`.
 
 ## Tips voor PDF callsheets
 Open een klus → klik **Print callsheet** → kies **Opslaan als PDF** in je printmenu.
+
+
+## Gebruik
+- Ga naar **Klussen** en klik op een rij (of **Open**) om een klus te bewerken.
+- In het detail kun je opslaan en direct **Print → PDF** maken.

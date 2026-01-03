@@ -221,3 +221,7 @@ body{
   .ps-box p{margin:0}
   .ps-steps ol{margin:0; padding-left:18px}
 }
+
+
+.clickrow{cursor:pointer}
+.clickrow:hover{background:rgba(82,232,232,.06)}
