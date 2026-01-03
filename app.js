@@ -660,8 +660,16 @@ function wireUI(){
     document.getElementById("filter-status").value = "";
     document.getElementById("filter-group").value = "";
     document.getElementById("filter-person").value = "";
-        renderTasks();
+    renderTasks();
   };
+
+  // filters: live update
+  document.getElementById("filter-search").addEventListener("input", ()=>renderTasks());
+  ["filter-status","filter-group","filter-person"].forEach(id=>{
+    const elx = document.getElementById(id);
+    if(elx) elx.addEventListener("change", ()=>renderTasks());
+  });
+
 
   document.getElementById("btn-close").onclick = ()=>{
     document.getElementById("drawer").classList.add("hidden");
