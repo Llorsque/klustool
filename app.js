@@ -526,12 +526,13 @@ function buildPrintSheet(task){
 
 function escapeHtml(s){
   return String(s ?? "")
-    .replaceAll("&","&amp;")
-    .replaceAll("<","&lt;")
-    .replaceAll(">","&gt;")
-    .replaceAll('"',"&quot;")
-    .replaceAll("'","&#039;");
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;")
+    .replace(/'/g,"&#039;");
 }
+
 
 function renderMaterials(){
   const tbody = document.querySelector("#table-materials tbody");
@@ -687,13 +688,15 @@ function wireUI(){
     alert("Opgeslagen ✅");
   };
 
-  document.getElementById("btn-print").onclick = ()=>{
-    const t = readTaskForm(); // ensure latest edits included
+  document.getElementById("btn-print").onclick = (e)=>{
+    if(e){ e.preventDefault(); e.stopPropagation(); }
+    const t = readTaskForm(); // include latest edits
     if(!t) return;
     saveToStorage();
     const sheet = document.getElementById("print-sheet");
     sheet.innerHTML = buildPrintSheet(t);
-    window.print();
+    // ensure DOM update before print (some browsers need a frame)
+    requestAnimationFrame(()=>window.print());
   };
 
   document.getElementById("btn-refresh-materials").onclick = renderMaterials;
