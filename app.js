@@ -18,6 +18,11 @@ let state = {
   tasks: [],
   people: [],
   selectedTaskId: null,
+  planning: {
+    mode: "gantt", // gantt | calendar
+    zoom: "week",  // month | week | day
+    focusDate: null // YYYY-MM-DD
+  }
 };
 
 function slugify(s){
@@ -102,6 +107,7 @@ function switchView(view){
   }
 
   if(view === "dashboard") renderDashboard();
+  if(view === "planning") renderPlanning();
   if(view === "tasks") renderTasks();
   if(view === "people") renderPeople();
   if(view === "materials") renderMaterials();
@@ -724,6 +730,373 @@ function wireUI(){
     renderMaterials();
   };
 }
+
+
+function ymd(d){
+  const pad = (n)=>String(n).padStart(2,"0");
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+}
+function parseTimeblock(tb){
+  // supports "09:00–12:00", "09:00-12:00", "09:00 – 12:00"
+  const s = (tb||"").trim();
+  if(!s) return null;
+  const m = s.match(/(\d{1,2}):(\d{2})\s*[–-]\s*(\d{1,2}):(\d{2})/);
+  if(!m) return null;
+  const sh = Number(m[1]), sm = Number(m[2]), eh = Number(m[3]), em = Number(m[4]);
+  if([sh,sm,eh,em].some(x=>Number.isNaN(x))) return null;
+  return { startMin: sh*60+sm, endMin: eh*60+em };
+}
+function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
+function startOfWeek(dateObj){
+  // Monday start
+  const d = new Date(dateObj);
+  const day = (d.getDay()+6)%7; // Mon=0
+  d.setDate(d.getDate()-day);
+  d.setHours(0,0,0,0);
+  return d;
+}
+function addDays(d, n){
+  const x = new Date(d);
+  x.setDate(x.getDate()+n);
+  return x;
+}
+function rangeForZoom(focusYmd, zoom){
+  const fd = focusYmd ? new Date(focusYmd+"T00:00:00") : new Date();
+  fd.setHours(0,0,0,0);
+
+  if(zoom === "day"){
+    const start = new Date(fd);
+    const end = addDays(start, 1);
+    return { start, end, unit:"hour" };
+  }
+  if(zoom === "week"){
+    const start = startOfWeek(fd);
+    const end = addDays(start, 7);
+    return { start, end, unit:"day" };
+  }
+  // month
+  const start = new Date(fd.getFullYear(), fd.getMonth(), 1);
+  const end = new Date(fd.getFullYear(), fd.getMonth()+1, 1);
+  return { start, end, unit:"day" };
+}
+
+function scheduledTasksInRange(range){
+  return state.tasks
+    .filter(t => t.scheduled && t.scheduled.date)
+    .map(t=>{
+      const date = t.scheduled.date;
+      const tb = parseTimeblock(t.scheduled.timeblock || "");
+      return { task: t, date, tb };
+    })
+    .filter(x=>{
+      const d = new Date(x.date+"T00:00:00");
+      return d >= range.start && d < range.end;
+    })
+    .sort((a,b)=>{
+      if(a.date !== b.date) return a.date.localeCompare(b.date);
+      const am = a.tb ? a.tb.startMin : 0;
+      const bm = b.tb ? b.tb.startMin : 0;
+      if(am !== bm) return am - bm;
+      return (a.task.title||"").localeCompare(b.task.title||"");
+    });
+}
+
+function statusClass(t){
+  if(t.status === "Afgerond") return "done";
+  if(t.status.startsWith("Wacht") || t.status === "Bezig" || t.status === "Ingepland") return "blocked";
+  return "";
+}
+
+function buildGantt(range){
+  const items = scheduledTasksInRange(range);
+  const wrap = el("div", {class:"gantt"});
+  const grid = el("div", {class:"gantt-grid"});
+  wrap.appendChild(grid);
+
+  const labelW = 320;
+  let cols = 0;
+  let colW = 44;
+  let labels = [];
+
+  if(range.unit === "hour"){
+    cols = 24;
+    colW = 54;
+    labels = Array.from({length:24}, (_,h)=> `${String(h).padStart(2,"0")}:00`);
+  }else{
+    // day columns
+    const days = Math.round((range.end - range.start)/(1000*60*60*24));
+    cols = days;
+    colW = 44;
+    labels = Array.from({length:days}, (_,i)=>{
+      const d = addDays(range.start, i);
+      return `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}`;
+    });
+  }
+
+  grid.style.gridTemplateColumns = `${labelW}px repeat(${cols}, ${colW}px)`;
+
+  // header row
+  grid.appendChild(el("div", {class:"gantt-cell gantt-head gantt-label"}, "Klus"));
+  labels.forEach(l=>{
+    grid.appendChild(el("div", {class:"gantt-cell gantt-head"}, l));
+  });
+
+  if(items.length === 0){
+    // One empty row
+    grid.appendChild(el("div", {class:"gantt-cell gantt-label"}, "–"));
+    grid.appendChild(el("div", {class:"gantt-cell", style:`grid-column: span ${cols}`}, "Geen ingeplande klussen in deze periode."));
+    return wrap;
+  }
+
+  items.forEach(({task, date, tb})=>{
+    // label cell
+    const label = el("div", {class:"gantt-cell gantt-label"}, [
+      el("div", {style:"font-weight:900"}, `${task.id} — ${task.title}`),
+      el("div", {class:"small"}, `${task.group || "–"} • ${task.location || "–"} • ${task.scheduled.timeblock || "Hele dag"}`)
+    ]);
+    grid.appendChild(label);
+
+    // track cells (merged in one big cell spanning all cols)
+    const track = el("div", {class:"gantt-cell gantt-track gantt-row", style:`grid-column: span ${cols}; position:relative; padding:0;`});
+    track.style.height = "54px";
+    grid.appendChild(track);
+
+    // compute bar position
+    let startPos = 0, endPos = cols;
+    if(range.unit === "hour"){
+      const startMin = tb ? tb.startMin : 9*60;
+      const endMin = tb ? tb.endMin : 17*60;
+      startPos = clamp(startMin/60, 0, 24);
+      endPos = clamp(endMin/60, 0, 24);
+    }else{
+      const dayIndex = Math.floor((new Date(date+"T00:00:00") - range.start)/(1000*60*60*24));
+      startPos = clamp(dayIndex, 0, cols-1);
+      endPos = clamp(dayIndex + 1, 1, cols);
+    }
+
+    const left = startPos * colW + 6;
+    const width = Math.max(24, (endPos - startPos) * colW - 12);
+
+    const bar = el("div", {
+      class:`gantt-bar ${statusClass(task)}`,
+      style:`left:${left}px; width:${width}px;`
+    }, [
+      el("span", {}, task.title),
+      el("span", {class:"tiny"}, `(${getPersonName(task.owner)})`)
+    ]);
+
+    bar.onclick = ()=>{ switchView("tasks"); openTaskAndScroll(task.id); };
+
+    track.appendChild(bar);
+  });
+
+  return wrap;
+}
+
+function buildCalendar(range){
+  const items = scheduledTasksInRange(range);
+  const byDate = new Map();
+  items.forEach(({task, date, tb})=>{
+    if(!byDate.has(date)) byDate.set(date, []);
+    byDate.get(date).push({task, tb});
+  });
+
+  if(state.planning.zoom === "day"){
+    return buildDayAgenda(range, byDate);
+  }
+
+  if(state.planning.zoom === "week"){
+    // week columns
+    const cal = el("div", {class:"cal"});
+    const week = el("div", {class:"cal-week"});
+    cal.appendChild(week);
+    for(let i=0;i<7;i++){
+      const d = addDays(range.start, i);
+      const date = ymd(d);
+      const col = el("div", {class:"cal-week-col"});
+      col.appendChild(el("div", {class:"cal-week-title"}, `${["Ma","Di","Wo","Do","Vr","Za","Zo"][i]} ${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}`));
+
+      const list = (byDate.get(date)||[]);
+      if(list.length === 0){
+        col.appendChild(el("div", {class:"muted"}, "–"));
+      }else{
+        list.forEach(({task})=>{
+          const chip = el("div", {class:`cal-chip ${statusClass(task)}`}, `${task.scheduled.timeblock ? task.scheduled.timeblock + " " : ""}${task.title}`);
+          chip.onclick = (e)=>{ e.stopPropagation(); switchView("tasks"); openTaskAndScroll(task.id); };
+          col.appendChild(chip);
+        });
+      }
+
+      col.onclick = ()=>{ state.planning.zoom = "day"; state.planning.focusDate = date; renderPlanning(); };
+      week.appendChild(col);
+    }
+    return cal;
+  }
+
+  // month view
+  const cal = el("div", {class:"cal"});
+  // DOW
+  const dows = ["Ma","Di","Wo","Do","Vr","Za","Zo"];
+  const dowRow = el("div", {class:"cal-month"});
+  dows.forEach(d=>dowRow.appendChild(el("div", {class:"cal-dow"}, d)));
+  cal.appendChild(dowRow);
+
+  const monthGrid = el("div", {class:"cal-month"});
+  cal.appendChild(monthGrid);
+
+  const first = new Date(range.start);
+  const startDow = (first.getDay()+6)%7; // 0=Mon
+  // Fill leading blanks
+  for(let i=0;i<startDow;i++){
+    monthGrid.appendChild(el("div", {class:"cal-day", style:"opacity:.35; cursor:default"}, ""));
+  }
+
+  const daysInMonth = Math.round((range.end - range.start)/(1000*60*60*24));
+  for(let i=0;i<daysInMonth;i++){
+    const d = addDays(range.start, i);
+    const date = ymd(d);
+    const cell = el("div", {class:"cal-day"});
+    cell.appendChild(el("div", {class:"cal-day-num"}, String(d.getDate())));
+
+    const list = (byDate.get(date)||[]).slice(0,3);
+    list.forEach(({task})=>{
+      const chip = el("div", {class:`cal-chip ${statusClass(task)}`}, `${task.scheduled.timeblock ? task.scheduled.timeblock + " " : ""}${task.title}`);
+      chip.onclick = (e)=>{ e.stopPropagation(); switchView("tasks"); openTaskAndScroll(task.id); };
+      cell.appendChild(chip);
+    });
+
+    const extra = (byDate.get(date)||[]).length - list.length;
+    if(extra>0){
+      cell.appendChild(el("div", {class:"small"}, `+${extra} meer…`));
+    }
+
+    cell.onclick = ()=>{ state.planning.zoom = "day"; state.planning.focusDate = date; renderPlanning(); };
+    monthGrid.appendChild(cell);
+  }
+
+  return cal;
+}
+
+function buildDayAgenda(range, byDate){
+  const date = ymd(range.start);
+  const list = (byDate.get(date)||[]).slice().sort((a,b)=>{
+    const am = a.task.scheduled?.timeblock ? (parseTimeblock(a.task.scheduled.timeblock)?.startMin ?? 0) : 0;
+    const bm = b.task.scheduled?.timeblock ? (parseTimeblock(b.task.scheduled.timeblock)?.startMin ?? 0) : 0;
+    return am - bm;
+  });
+
+  const wrap = el("div", {class:"day-agenda"});
+  const grid = el("div", {class:"day-grid"});
+  wrap.appendChild(grid);
+
+  // hour rows
+  for(let h=0;h<24;h++){
+    const row = el("div", {class:"hour-row"}, [
+      el("div", {class:"hour-label"}, `${String(h).padStart(2,"0")}:00`),
+      el("div", {class:"hour-line"}, "")
+    ]);
+    grid.appendChild(row);
+  }
+
+  const layer = el("div", {class:"agenda-layer"});
+  grid.appendChild(layer);
+
+  const pxPerMin = 56/60; // 56px per hour
+  list.forEach(({task})=>{
+    const tb = parseTimeblock(task.scheduled.timeblock||"");
+    const startMin = tb ? tb.startMin : 9*60;
+    const endMin = tb ? tb.endMin : Math.min(startMin+60, 24*60);
+    const top = startMin * pxPerMin;
+    const height = Math.max(34, (endMin - startMin) * pxPerMin);
+
+    const block = el("div", {class:`agenda-block ${statusClass(task)}`, style:`top:${top}px; height:${height}px;`}, [
+      el("div", {}, `${task.scheduled.timeblock || "Hele dag"} — ${task.title}`),
+      el("div", {class:"tiny"}, `${task.id} • ${task.location||"–"} • ${getPersonName(task.owner)}`)
+    ]);
+    block.onclick = ()=>{ switchView("tasks"); openTaskAndScroll(task.id); };
+    layer.appendChild(block);
+  });
+
+  if(list.length === 0){
+    layer.appendChild(el("div", {class:"muted", style:"position:absolute; top:12px; left:12px;"}, "Geen klussen ingepland op deze dag."));
+  }
+
+  return wrap;
+}
+
+function setPlanningButtons(){
+  // mode buttons
+  const mg = document.getElementById("plan-mode-gantt");
+  const mc = document.getElementById("plan-mode-cal");
+  if(mg && mc){
+    mg.classList.toggle("active", state.planning.mode === "gantt");
+    mc.classList.toggle("active", state.planning.mode === "calendar");
+  }
+  // zoom
+  const zm = document.getElementById("zoom-month");
+  const zw = document.getElementById("zoom-week");
+  const zd = document.getElementById("zoom-day");
+  if(zm && zw && zd){
+    zm.classList.toggle("active", state.planning.zoom === "month");
+    zw.classList.toggle("active", state.planning.zoom === "week");
+    zd.classList.toggle("active", state.planning.zoom === "day");
+  }
+
+  const dateInput = document.getElementById("plan-date");
+  if(dateInput){
+    dateInput.value = state.planning.focusDate || ymd(new Date());
+  }
+}
+
+function wirePlanningControls(){
+  const mg = document.getElementById("plan-mode-gantt");
+  const mc = document.getElementById("plan-mode-cal");
+  if(mg && !mg.dataset.wired){
+    mg.dataset.wired = "1";
+    mg.onclick = ()=>{ state.planning.mode = "gantt"; renderPlanning(); };
+    mc.onclick = ()=>{ state.planning.mode = "calendar"; renderPlanning(); };
+
+    document.getElementById("zoom-month").onclick = ()=>{ state.planning.zoom = "month"; renderPlanning(); };
+    document.getElementById("zoom-week").onclick = ()=>{ state.planning.zoom = "week"; renderPlanning(); };
+    document.getElementById("zoom-day").onclick = ()=>{ state.planning.zoom = "day"; renderPlanning(); };
+
+    document.getElementById("plan-today").onclick = ()=>{
+      state.planning.focusDate = ymd(new Date());
+      renderPlanning();
+    };
+
+    document.getElementById("plan-date").onchange = (e)=>{
+      state.planning.focusDate = e.target.value;
+      renderPlanning();
+    };
+  }
+}
+
+function renderPlanning(){
+  if(!state.planning.focusDate){
+    state.planning.focusDate = ymd(new Date());
+  }
+  wirePlanningControls();
+  setPlanningButtons();
+
+  const range = rangeForZoom(state.planning.focusDate, state.planning.zoom);
+
+  const wrap = document.getElementById("planning-wrap");
+  wrap.innerHTML = "";
+
+  const header = el("div", {class:"muted", style:"margin:6px 2px 10px 2px;"});
+  const startTxt = range.start.toLocaleDateString("nl-NL");
+  const endTxt = addDays(range.end, -1).toLocaleDateString("nl-NL");
+  header.textContent = state.planning.zoom === "day"
+    ? `Dagoverzicht: ${startTxt} (per uur)`
+    : `${state.planning.zoom[0].toUpperCase()+state.planning.zoom.slice(1)}overzicht: ${startTxt} – ${endTxt}`;
+
+  wrap.appendChild(header);
+
+  const view = state.planning.mode === "gantt" ? buildGantt(range) : buildCalendar(range);
+  wrap.appendChild(view);
+}
+
 
 async function init(){
   const stored = loadFromStorage();

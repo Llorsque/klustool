@@ -18,6 +18,7 @@
 
     <nav class="tabs" aria-label="Navigatie">
       <button class="tab active" data-view="dashboard">Dashboard</button>
+      <button class="tab" data-view="planning">Planning</button>
       <button class="tab" data-view="tasks">Klussen</button>
       <button class="tab" data-view="materials">Materialen</button>
       <button class="tab" data-view="people">Personen</button>
@@ -235,7 +236,46 @@
       </section>
     </section>
 
-    <!-- MATERIALS -->
+    
+    <!-- PLANNING -->
+    <section id="view-planning" class="view hidden">
+      <div class="panel">
+        <div class="panel-head">
+          <h2>Planning</h2>
+          <div class="panel-actions">
+            <div class="seg">
+              <button class="seg-btn active" id="plan-mode-gantt" type="button">Balken</button>
+              <button class="seg-btn" id="plan-mode-cal" type="button">Kalender</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="planning-controls">
+          <div class="seg">
+            <button class="seg-btn active" id="zoom-month" type="button">Maand</button>
+            <button class="seg-btn" id="zoom-week" type="button">Week</button>
+            <button class="seg-btn" id="zoom-day" type="button">Dag</button>
+          </div>
+
+          <div class="plan-date">
+            <button class="btn secondary" id="plan-today" type="button">Vandaag</button>
+            <input type="date" id="plan-date" />
+          </div>
+
+          <div class="plan-legend">
+            <span class="tag"><span class="dot good"></span> Afgerond</span>
+            <span class="tag"><span class="dot warn"></span> Ingepland/Bezig/Wacht</span>
+            <span class="tag"><span class="dot bad"></span> Backlog</span>
+          </div>
+        </div>
+
+        <div id="planning-wrap">
+          <!-- renders here -->
+        </div>
+      </div>
+    </section>
+
+<!-- MATERIALS -->
     <section id="view-materials" class="view hidden">
       <div class="panel">
         <div class="panel-head">

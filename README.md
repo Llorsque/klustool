@@ -45,3 +45,10 @@ Open een klus → klik **Print callsheet** → kies **Opslaan als PDF** in je pr
 ## Gebruik
 - Ga naar **Klussen** en klik op een rij (of **Open**) om een klus te bewerken.
 - In het detail kun je opslaan en direct **Print → PDF** maken.
+
+
+## Planning
+- Ga naar **Planning**.
+- Gebruik de switch **Balken/Kalender**.
+- Zoom: **Maand/Week/Dag** (Dag toont per uur).
+- Planning gebruikt alleen klussen met **datum + tijdvak** in het klusdetail.
