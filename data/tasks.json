@@ -7,10 +7,7 @@
     "type": "Binnen",
     "category": "Schilderwerk",
     "title": "Plafonds witten + randjes afwerken (hele huis)",
-    "priority": "Should",
     "status": "Backlog",
-    "owner": "ian",
-    "assignees": [],
     "estimate_hours": {
       "optimistic": 6,
       "realistic": 10,
@@ -18,8 +15,8 @@
     },
     "actual_hours": 0,
     "scheduled": {
-      "date": "",
-      "timeblock": ""
+      "start": "",
+      "end": ""
     },
     "dependencies": [],
     "definition_of_done": "Alle plafonds egaal wit, randen strak (geen zichtbare overgangen/rollers).",
@@ -40,7 +37,11 @@
       "Randen controleren en bijwerken",
       "Opruimen/afvoer"
     ],
-    "notes": ""
+    "notes": "",
+    "executors": {
+      "exec1": "ian",
+      "exec2": ""
+    }
   },
   {
     "id": "OH-BIN-02",
@@ -50,10 +51,7 @@
     "type": "Binnen",
     "category": "Afwerking",
     "title": "Plinten opnieuw plakken + afwerken",
-    "priority": "Should",
     "status": "Backlog",
-    "owner": "ian",
-    "assignees": [],
     "estimate_hours": {
       "optimistic": 4,
       "realistic": 8,
@@ -61,8 +59,8 @@
     },
     "actual_hours": 0,
     "scheduled": {
-      "date": "",
-      "timeblock": ""
+      "start": "",
+      "end": ""
     },
     "dependencies": [],
     "definition_of_done": "Alle plinten vast, kieren dicht, afwerking netjes (evt. bijgewerkt/geverfd).",
@@ -87,7 +85,11 @@
       "Bijwerken/verven",
       "Opruimen"
     ],
-    "notes": ""
+    "notes": "",
+    "executors": {
+      "exec1": "ian",
+      "exec2": ""
+    }
   },
   {
     "id": "OH-BIN-03",
@@ -97,10 +99,7 @@
     "type": "Binnen",
     "category": "Schilderwerk",
     "title": "TV-meubel nalopen + evt. 1x schilderen",
-    "priority": "Could",
     "status": "Backlog",
-    "owner": "ian",
-    "assignees": [],
     "estimate_hours": {
       "optimistic": 1,
       "realistic": 2,
@@ -108,8 +107,8 @@
     },
     "actual_hours": 0,
     "scheduled": {
-      "date": "",
-      "timeblock": ""
+      "start": "",
+      "end": ""
     },
     "dependencies": [],
     "definition_of_done": "Strak en dekkend, geen beschadigingen zichtbaar.",
@@ -128,7 +127,11 @@
       "Laklaag",
       "Controle/bijwerken"
     ],
-    "notes": ""
+    "notes": "",
+    "executors": {
+      "exec1": "ian",
+      "exec2": ""
+    }
   },
   {
     "id": "OH-BIN-04",
@@ -138,10 +141,7 @@
     "type": "Binnen",
     "category": "Schilderwerk",
     "title": "Erker: opschuren + schilderen (binnen kozijnen + plank)",
-    "priority": "Should",
     "status": "Backlog",
-    "owner": "ian",
-    "assignees": [],
     "estimate_hours": {
       "optimistic": 3,
       "realistic": 5,
@@ -149,8 +149,8 @@
     },
     "actual_hours": 0,
     "scheduled": {
-      "date": "",
-      "timeblock": ""
+      "start": "",
+      "end": ""
     },
     "dependencies": [],
     "definition_of_done": "Glad, dekkend, nette randen op kozijnen en plank.",
@@ -172,7 +172,11 @@
       "(Droog)",
       "Laklaag 2/bijwerken"
     ],
-    "notes": ""
+    "notes": "",
+    "executors": {
+      "exec1": "ian",
+      "exec2": ""
+    }
   },
   {
     "id": "OH-BIN-05",
@@ -182,10 +186,7 @@
     "type": "Binnen",
     "category": "Schilderwerk",
     "title": "Deuren + deurposten + kozijnen binnen: plekjes bijwerken / lik verf",
-    "priority": "Should",
     "status": "Backlog",
-    "owner": "ian",
-    "assignees": [],
     "estimate_hours": {
       "optimistic": 6,
       "realistic": 12,
@@ -193,8 +194,8 @@
     },
     "actual_hours": 0,
     "scheduled": {
-      "date": "",
-      "timeblock": ""
+      "start": "",
+      "end": ""
     },
     "dependencies": [],
     "definition_of_done": "Geen zichtbare schade/plekjes; consistente finish.",
@@ -217,7 +218,11 @@
       "Lak/bijwerken",
       "Nacontrole"
     ],
-    "notes": ""
+    "notes": "",
+    "executors": {
+      "exec1": "ian",
+      "exec2": ""
+    }
   },
   {
     "id": "OH-BIN-06",
@@ -227,10 +232,7 @@
     "type": "Binnen",
     "category": "Reparatie/Schilderwerk",
     "title": "Trap: stootplekjes repareren + schilderen",
-    "priority": "Should",
     "status": "Backlog",
-    "owner": "ian",
-    "assignees": [],
     "estimate_hours": {
       "optimistic": 3,
       "realistic": 6,
@@ -238,8 +240,8 @@
     },
     "actual_hours": 0,
     "scheduled": {
-      "date": "",
-      "timeblock": ""
+      "start": "",
+      "end": ""
     },
     "dependencies": [],
     "definition_of_done": "Trap oogt netjes; geen chips/krassen zichtbaar.",
@@ -260,7 +262,11 @@
       "Schilderen",
       "Controle"
     ],
-    "notes": ""
+    "notes": "",
+    "executors": {
+      "exec1": "ian",
+      "exec2": ""
+    }
   },
   {
     "id": "OH-BIN-07",
@@ -270,10 +276,7 @@
     "type": "Binnen",
     "category": "Gips/Afwerking",
     "title": "Nieuw stukje gipsmuur bij leuning verwerken",
-    "priority": "Should",
     "status": "Backlog",
-    "owner": "ian",
-    "assignees": [],
     "estimate_hours": {
       "optimistic": 2,
       "realistic": 4,
@@ -281,8 +284,8 @@
     },
     "actual_hours": 0,
     "scheduled": {
-      "date": "",
-      "timeblock": ""
+      "start": "",
+      "end": ""
     },
     "dependencies": [],
     "definition_of_done": "Vlak en naadloos; geschuurd en geverfd.",
@@ -306,7 +309,11 @@
       "Schuren",
       "Verven"
     ],
-    "notes": ""
+    "notes": "",
+    "executors": {
+      "exec1": "ian",
+      "exec2": ""
+    }
   },
   {
     "id": "OH-BIN-08",
@@ -316,10 +323,7 @@
     "type": "Binnen",
     "category": "Schilderwerk",
     "title": "Wasmeubel afwerken: MDF schilderen",
-    "priority": "Could",
     "status": "Backlog",
-    "owner": "ian",
-    "assignees": [],
     "estimate_hours": {
       "optimistic": 2,
       "realistic": 3,
@@ -327,8 +331,8 @@
     },
     "actual_hours": 0,
     "scheduled": {
-      "date": "",
-      "timeblock": ""
+      "start": "",
+      "end": ""
     },
     "dependencies": [],
     "definition_of_done": "MDF strak en dekkend; nette hoeken.",
@@ -348,7 +352,11 @@
       "Laklaag",
       "Bijwerken"
     ],
-    "notes": ""
+    "notes": "",
+    "executors": {
+      "exec1": "ian",
+      "exec2": ""
+    }
   },
   {
     "id": "OH-BIN-09",
@@ -358,10 +366,7 @@
     "type": "Binnen",
     "category": "Afwerking",
     "title": "Keuken: stopcontacten mooi afwerken",
-    "priority": "Must",
     "status": "Backlog",
-    "owner": "ian",
-    "assignees": [],
     "estimate_hours": {
       "optimistic": 1,
       "realistic": 2,
@@ -369,8 +374,8 @@
     },
     "actual_hours": 0,
     "scheduled": {
-      "date": "",
-      "timeblock": ""
+      "start": "",
+      "end": ""
     },
     "dependencies": [],
     "definition_of_done": "Strak, recht; geen kieren/rafels; showroom-look.",
@@ -393,7 +398,11 @@
       "Afmonteren",
       "Verf bijwerken"
     ],
-    "notes": ""
+    "notes": "",
+    "executors": {
+      "exec1": "ian",
+      "exec2": ""
+    }
   },
   {
     "id": "OH-BIN-10",
@@ -403,10 +412,7 @@
     "type": "Binnen",
     "category": "Montage/Afwerking",
     "title": "Keuken: panelen/zijpanelen vastschroeven + uitlijnen + afwerken",
-    "priority": "Must",
     "status": "Backlog",
-    "owner": "ian",
-    "assignees": [],
     "estimate_hours": {
       "optimistic": 2,
       "realistic": 4,
@@ -414,8 +420,8 @@
     },
     "actual_hours": 0,
     "scheduled": {
-      "date": "",
-      "timeblock": ""
+      "start": "",
+      "end": ""
     },
     "dependencies": [],
     "definition_of_done": "Panelen strak uitgelijnd, stevig, nette naden.",
@@ -436,7 +442,11 @@
       "Naden/afwerking",
       "Eindcontrole"
     ],
-    "notes": ""
+    "notes": "",
+    "executors": {
+      "exec1": "ian",
+      "exec2": ""
+    }
   },
   {
     "id": "OH-BIN-11",
@@ -446,10 +456,7 @@
     "type": "Binnen",
     "category": "Afstelling/Afwerking",
     "title": "Keuken: lades 1x strak afwerken/afstellen",
-    "priority": "Must",
     "status": "Backlog",
-    "owner": "ian",
-    "assignees": [],
     "estimate_hours": {
       "optimistic": 2,
       "realistic": 4,
@@ -457,8 +464,8 @@
     },
     "actual_hours": 0,
     "scheduled": {
-      "date": "",
-      "timeblock": ""
+      "start": "",
+      "end": ""
     },
     "dependencies": [
       "OH-BIN-10"
@@ -477,7 +484,11 @@
       "Schroeven nalopen",
       "Eindfoto"
     ],
-    "notes": ""
+    "notes": "",
+    "executors": {
+      "exec1": "ian",
+      "exec2": ""
+    }
   },
   {
     "id": "OH-BIN-12",
@@ -487,10 +498,7 @@
     "type": "Binnen",
     "category": "Installatie",
     "title": "Badkamermeubel vervangen (meubel + spiegel + kraan + rondom)",
-    "priority": "Must",
     "status": "Backlog",
-    "owner": "ian",
-    "assignees": [],
     "estimate_hours": {
       "optimistic": 6,
       "realistic": 10,
@@ -498,8 +506,8 @@
     },
     "actual_hours": 0,
     "scheduled": {
-      "date": "",
-      "timeblock": ""
+      "start": "",
+      "end": ""
     },
     "dependencies": [],
     "definition_of_done": "Alles werkt; waterdicht; strak afgekit; stevig gemonteerd.",
@@ -529,7 +537,11 @@
       "Afkitten",
       "Opruimen"
     ],
-    "notes": "Let op droogtijd kit."
+    "notes": "Let op droogtijd kit.",
+    "executors": {
+      "exec1": "ian",
+      "exec2": ""
+    }
   },
   {
     "id": "OH-BIN-13",
@@ -539,10 +551,7 @@
     "type": "Binnen",
     "category": "Montage",
     "title": "Badkamer radiator opnieuw netjes ophangen + aansluitingen netjes",
-    "priority": "Should",
     "status": "Backlog",
-    "owner": "ian",
-    "assignees": [],
     "estimate_hours": {
       "optimistic": 2,
       "realistic": 4,
@@ -550,8 +559,8 @@
     },
     "actual_hours": 0,
     "scheduled": {
-      "date": "",
-      "timeblock": ""
+      "start": "",
+      "end": ""
     },
     "dependencies": [],
     "definition_of_done": "Radiator stevig en recht; aansluitingen netjes; geen lekkage.",
@@ -571,7 +580,11 @@
       "Ontluchten",
       "Test"
     ],
-    "notes": ""
+    "notes": "",
+    "executors": {
+      "exec1": "ian",
+      "exec2": ""
+    }
   },
   {
     "id": "OH-BIN-14",
@@ -581,10 +594,7 @@
     "type": "Binnen",
     "category": "Schoonmaak",
     "title": "Lichtkoepel binnenkant volledig schoonmaken",
-    "priority": "Should",
     "status": "Backlog",
-    "owner": "ian",
-    "assignees": [],
     "estimate_hours": {
       "optimistic": 0.5,
       "realistic": 1,
@@ -592,8 +602,8 @@
     },
     "actual_hours": 0,
     "scheduled": {
-      "date": "",
-      "timeblock": ""
+      "start": "",
+      "end": ""
     },
     "dependencies": [],
     "definition_of_done": "Helder en streeploos; geen vuilranden.",
@@ -610,7 +620,11 @@
       "Nadrogen",
       "Controle in daglicht"
     ],
-    "notes": ""
+    "notes": "",
+    "executors": {
+      "exec1": "ian",
+      "exec2": ""
+    }
   },
   {
     "id": "OH-BIN-15",
@@ -620,10 +634,7 @@
     "type": "Binnen",
     "category": "Elektra",
     "title": "Lamp gang (fix/ophangen/afwerken)",
-    "priority": "Should",
     "status": "Backlog",
-    "owner": "ian",
-    "assignees": [],
     "estimate_hours": {
       "optimistic": 0.5,
       "realistic": 1,
@@ -631,8 +642,8 @@
     },
     "actual_hours": 0,
     "scheduled": {
-      "date": "",
-      "timeblock": ""
+      "start": "",
+      "end": ""
     },
     "dependencies": [],
     "definition_of_done": "Lamp werkt; netjes gemonteerd; geen losse kabels.",
@@ -650,7 +661,11 @@
       "Test",
       "Afwerken"
     ],
-    "notes": ""
+    "notes": "",
+    "executors": {
+      "exec1": "ian",
+      "exec2": ""
+    }
   },
   {
     "id": "OH-BIN-16",
@@ -660,10 +675,7 @@
     "type": "Binnen",
     "category": "Schilderwerk",
     "title": "Plafond gang nalopen (meestal onderdeel van plafonds)",
-    "priority": "Could",
     "status": "Backlog",
-    "owner": "ian",
-    "assignees": [],
     "estimate_hours": {
       "optimistic": 1,
       "realistic": 2,
@@ -671,8 +683,8 @@
     },
     "actual_hours": 0,
     "scheduled": {
-      "date": "",
-      "timeblock": ""
+      "start": "",
+      "end": ""
     },
     "dependencies": [
       "OH-BIN-01"
@@ -683,7 +695,11 @@
     "steps": [
       "Opnemen in plafonds-ronde of als touch-up"
     ],
-    "notes": ""
+    "notes": "",
+    "executors": {
+      "exec1": "ian",
+      "exec2": ""
+    }
   },
   {
     "id": "OH-BIN-17",
@@ -693,10 +709,7 @@
     "type": "Binnen",
     "category": "Presentatie",
     "title": "Gordijn/lamellen achterzijde raam: netjes maken (ophangen/repareren/vervangen)",
-    "priority": "Should",
     "status": "Backlog",
-    "owner": "ian",
-    "assignees": [],
     "estimate_hours": {
       "optimistic": 0.5,
       "realistic": 1.5,
@@ -704,8 +717,8 @@
     },
     "actual_hours": 0,
     "scheduled": {
-      "date": "",
-      "timeblock": ""
+      "start": "",
+      "end": ""
     },
     "dependencies": [],
     "definition_of_done": "Raambekleding functioneel en netjes; geen rommelige indruk.",
@@ -723,7 +736,11 @@
       "Test openen/sluiten",
       "Afwerken"
     ],
-    "notes": "Maak concreet: wat moet er precies gebeuren?"
+    "notes": "Maak concreet: wat moet er precies gebeuren?",
+    "executors": {
+      "exec1": "ian",
+      "exec2": ""
+    }
   },
   {
     "id": "OH-BIN-18",
@@ -733,10 +750,7 @@
     "type": "Binnen",
     "category": "Afwerking",
     "title": "Schroefjes in plafond afwerken",
-    "priority": "Should",
     "status": "Backlog",
-    "owner": "ian",
-    "assignees": [],
     "estimate_hours": {
       "optimistic": 0.5,
       "realistic": 1,
@@ -744,8 +758,8 @@
     },
     "actual_hours": 0,
     "scheduled": {
-      "date": "",
-      "timeblock": ""
+      "start": "",
+      "end": ""
     },
     "dependencies": [
       "OH-BIN-01"
@@ -766,7 +780,11 @@
       "Schuren",
       "Bijwerken verf"
     ],
-    "notes": ""
+    "notes": "",
+    "executors": {
+      "exec1": "ian",
+      "exec2": ""
+    }
   },
   {
     "id": "OH-BIN-19",
@@ -776,10 +794,7 @@
     "type": "Binnen",
     "category": "Schilderwerk",
     "title": "Muren checken + waar nodig bijwerken/schilderen",
-    "priority": "Should",
     "status": "Backlog",
-    "owner": "ian",
-    "assignees": [],
     "estimate_hours": {
       "optimistic": 3,
       "realistic": 6,
@@ -787,8 +802,8 @@
     },
     "actual_hours": 0,
     "scheduled": {
-      "date": "",
-      "timeblock": ""
+      "start": "",
+      "end": ""
     },
     "dependencies": [],
     "definition_of_done": "Geen zichtbare vlekken/plekken; egaal en fris.",
@@ -807,7 +822,11 @@
       "Bijwerken verf",
       "Eindcontrole in daglicht"
     ],
-    "notes": ""
+    "notes": "",
+    "executors": {
+      "exec1": "ian",
+      "exec2": ""
+    }
   },
   {
     "id": "OH-BIN-20",
@@ -817,10 +836,7 @@
     "type": "Binnen",
     "category": "Reparatie",
     "title": "Raamhendel/raamslot vervangen",
-    "priority": "Should",
     "status": "Backlog",
-    "owner": "ian",
-    "assignees": [],
     "estimate_hours": {
       "optimistic": 0.5,
       "realistic": 1,
@@ -828,8 +844,8 @@
     },
     "actual_hours": 0,
     "scheduled": {
-      "date": "",
-      "timeblock": ""
+      "start": "",
+      "end": ""
     },
     "dependencies": [],
     "definition_of_done": "Hendel/slot werkt soepel en zit stevig.",
@@ -846,7 +862,11 @@
       "Nieuw monteren",
       "Test"
     ],
-    "notes": ""
+    "notes": "",
+    "executors": {
+      "exec1": "ian",
+      "exec2": ""
+    }
   },
   {
     "id": "OH-BIN-21",
@@ -856,10 +876,7 @@
     "type": "Binnen",
     "category": "Schilderwerk",
     "title": "Binnenzijde raamkozijnen voorkant: schoon + lik verf",
-    "priority": "Should",
     "status": "Backlog",
-    "owner": "ian",
-    "assignees": [],
     "estimate_hours": {
       "optimistic": 2,
       "realistic": 4,
@@ -867,8 +884,8 @@
     },
     "actual_hours": 0,
     "scheduled": {
-      "date": "",
-      "timeblock": ""
+      "start": "",
+      "end": ""
     },
     "dependencies": [],
     "definition_of_done": "Kozijnen fris en dekkend; geen grauwheid/plekken.",
@@ -888,7 +905,11 @@
       "Laklaag",
       "Nacontrole"
     ],
-    "notes": ""
+    "notes": "",
+    "executors": {
+      "exec1": "ian",
+      "exec2": ""
+    }
   },
   {
     "id": "OH-BIN-22",
@@ -898,10 +919,7 @@
     "type": "Binnen",
     "category": "Afwerking",
     "title": "Plafondkapje vervangen (vergeeld → nieuw wit)",
-    "priority": "Could",
     "status": "Backlog",
-    "owner": "ian",
-    "assignees": [],
     "estimate_hours": {
       "optimistic": 0.25,
       "realistic": 0.5,
@@ -909,8 +927,8 @@
     },
     "actual_hours": 0,
     "scheduled": {
-      "date": "",
-      "timeblock": ""
+      "start": "",
+      "end": ""
     },
     "dependencies": [],
     "definition_of_done": "Nieuw kapje zit strak en netjes gemonteerd.",
@@ -927,7 +945,11 @@
       "Nieuw plaatsen",
       "Test"
     ],
-    "notes": ""
+    "notes": "",
+    "executors": {
+      "exec1": "ian",
+      "exec2": ""
+    }
   },
   {
     "id": "OH-PRE-01",
@@ -937,10 +959,7 @@
     "type": "Logistiek",
     "category": "Verhuizen",
     "title": "Piano vooraf verhuizen",
-    "priority": "Must",
     "status": "Backlog",
-    "owner": "ian",
-    "assignees": [],
     "estimate_hours": {
       "optimistic": 1,
       "realistic": 2,
@@ -948,8 +967,8 @@
     },
     "actual_hours": 0,
     "scheduled": {
-      "date": "",
-      "timeblock": ""
+      "start": "",
+      "end": ""
     },
     "dependencies": [],
     "definition_of_done": "Piano weg uit huis; vloer/wand netjes achtergelaten.",
@@ -968,7 +987,11 @@
       "Controle schade",
       "Opruimen"
     ],
-    "notes": "Overweeg piano-slee/transportdekens."
+    "notes": "Overweeg piano-slee/transportdekens.",
+    "executors": {
+      "exec1": "ian",
+      "exec2": ""
+    }
   },
   {
     "id": "OH-PRE-02",
@@ -978,10 +1001,7 @@
     "type": "Logistiek",
     "category": "Verplaatsen",
     "title": "Box vooraf verplaatsen/verhuizen",
-    "priority": "Must",
     "status": "Backlog",
-    "owner": "ian",
-    "assignees": [],
     "estimate_hours": {
       "optimistic": 0.5,
       "realistic": 1,
@@ -989,8 +1009,8 @@
     },
     "actual_hours": 0,
     "scheduled": {
-      "date": "",
-      "timeblock": ""
+      "start": "",
+      "end": ""
     },
     "dependencies": [],
     "definition_of_done": "Box uit zicht/weg; plek opgeruimd.",
@@ -1001,7 +1021,11 @@
       "Verplaatsen",
       "Plek netjes maken"
     ],
-    "notes": ""
+    "notes": "",
+    "executors": {
+      "exec1": "ian",
+      "exec2": ""
+    }
   },
   {
     "id": "OH-PRE-03",
@@ -1011,10 +1035,7 @@
     "type": "Binnen",
     "category": "Opruimen",
     "title": "Kasten achterkamer opruimen/uitzoeken",
-    "priority": "Must",
     "status": "Backlog",
-    "owner": "ian",
-    "assignees": [],
     "estimate_hours": {
       "optimistic": 2,
       "realistic": 4,
@@ -1022,8 +1043,8 @@
     },
     "actual_hours": 0,
     "scheduled": {
-      "date": "",
-      "timeblock": ""
+      "start": "",
+      "end": ""
     },
     "dependencies": [],
     "definition_of_done": "Kasten verkoopproof: overzichtelijk, geen rommelige indruk.",
@@ -1040,7 +1061,11 @@
       "Terugzetten: lucht/ruimte",
       "Afval weg"
     ],
-    "notes": ""
+    "notes": "",
+    "executors": {
+      "exec1": "ian",
+      "exec2": ""
+    }
   },
   {
     "id": "OH-PRE-04",
@@ -1050,10 +1075,7 @@
     "type": "Binnen",
     "category": "Opruimen",
     "title": "Voorraadkast keuken opruimen",
-    "priority": "Must",
     "status": "Backlog",
-    "owner": "ian",
-    "assignees": [],
     "estimate_hours": {
       "optimistic": 1,
       "realistic": 2,
@@ -1061,8 +1083,8 @@
     },
     "actual_hours": 0,
     "scheduled": {
-      "date": "",
-      "timeblock": ""
+      "start": "",
+      "end": ""
     },
     "dependencies": [],
     "definition_of_done": "Netjes en overzichtelijk; niet overvol; schappen schoon.",
@@ -1079,7 +1101,11 @@
       "Schoonmaken schappen",
       "Netjes terugplaatsen"
     ],
-    "notes": ""
+    "notes": "",
+    "executors": {
+      "exec1": "ian",
+      "exec2": ""
+    }
   },
   {
     "id": "OH-PRE-05",
@@ -1089,10 +1115,7 @@
     "type": "Binnen",
     "category": "Opruimen",
     "title": "Zolder opruimen/uitzoeken",
-    "priority": "Must",
     "status": "Backlog",
-    "owner": "ian",
-    "assignees": [],
     "estimate_hours": {
       "optimistic": 3,
       "realistic": 6,
@@ -1100,8 +1123,8 @@
     },
     "actual_hours": 0,
     "scheduled": {
-      "date": "",
-      "timeblock": ""
+      "start": "",
+      "end": ""
     },
     "dependencies": [],
     "definition_of_done": "Looppad vrij; spullen geclusterd/in boxen; zolder oogt ruim en veilig.",
@@ -1119,7 +1142,11 @@
       "Afval weg",
       "Eindfoto"
     ],
-    "notes": ""
+    "notes": "",
+    "executors": {
+      "exec1": "ian",
+      "exec2": ""
+    }
   },
   {
     "id": "OH-BUI-01",
@@ -1129,10 +1156,7 @@
     "type": "Buiten",
     "category": "Schilderwerk",
     "title": "Hokje: deur + kozijnen schilderen",
-    "priority": "Should",
     "status": "Backlog",
-    "owner": "ian",
-    "assignees": [],
     "estimate_hours": {
       "optimistic": 2,
       "realistic": 4,
@@ -1140,8 +1164,8 @@
     },
     "actual_hours": 0,
     "scheduled": {
-      "date": "",
-      "timeblock": ""
+      "start": "",
+      "end": ""
     },
     "dependencies": [],
     "definition_of_done": "Dekkend en strak; buitenbestendig; geen druipers.",
@@ -1164,7 +1188,11 @@
       "Laklaag 2",
       "Controle"
     ],
-    "notes": "Plan op droge dag."
+    "notes": "Plan op droge dag.",
+    "executors": {
+      "exec1": "ian",
+      "exec2": ""
+    }
   },
   {
     "id": "OH-BUI-02",
@@ -1174,10 +1202,7 @@
     "type": "Buiten",
     "category": "Timmer/Schilderwerk",
     "title": "Achterruit kozijnen: schuren + schilderen + neuslatten inzetten",
-    "priority": "Should",
     "status": "Backlog",
-    "owner": "ian",
-    "assignees": [],
     "estimate_hours": {
       "optimistic": 4,
       "realistic": 8,
@@ -1185,8 +1210,8 @@
     },
     "actual_hours": 0,
     "scheduled": {
-      "date": "",
-      "timeblock": ""
+      "start": "",
+      "end": ""
     },
     "dependencies": [],
     "definition_of_done": "Neuslatten strak; lak netjes; geen houtrot-look; alles dekkend.",
@@ -1213,7 +1238,11 @@
       "Schilderen",
       "Controle"
     ],
-    "notes": "Weer + droogtijd."
+    "notes": "Weer + droogtijd.",
+    "executors": {
+      "exec1": "ian",
+      "exec2": ""
+    }
   },
   {
     "id": "OH-BUI-03",
@@ -1223,10 +1252,7 @@
     "type": "Buiten",
     "category": "Schilderwerk",
     "title": "Achterdeur mogelijk nog 1x schilderen",
-    "priority": "Could",
     "status": "Backlog",
-    "owner": "ian",
-    "assignees": [],
     "estimate_hours": {
       "optimistic": 1,
       "realistic": 2,
@@ -1234,8 +1260,8 @@
     },
     "actual_hours": 0,
     "scheduled": {
-      "date": "",
-      "timeblock": ""
+      "start": "",
+      "end": ""
     },
     "dependencies": [],
     "definition_of_done": "Dekkend en strak; randen netjes.",
@@ -1251,7 +1277,11 @@
       "Schuren",
       "Lak"
     ],
-    "notes": ""
+    "notes": "",
+    "executors": {
+      "exec1": "ian",
+      "exec2": ""
+    }
   },
   {
     "id": "OH-BUI-04",
@@ -1261,10 +1291,7 @@
     "type": "Buiten",
     "category": "Schilderwerk",
     "title": "Voordeurdrempel in de verf",
-    "priority": "Should",
     "status": "Backlog",
-    "owner": "ian",
-    "assignees": [],
     "estimate_hours": {
       "optimistic": 0.5,
       "realistic": 1,
@@ -1272,8 +1299,8 @@
     },
     "actual_hours": 0,
     "scheduled": {
-      "date": "",
-      "timeblock": ""
+      "start": "",
+      "end": ""
     },
     "dependencies": [],
     "definition_of_done": "Slijtvast en netjes; geen kale plekken.",
@@ -1291,7 +1318,11 @@
       "Verflaag",
       "Controle"
     ],
-    "notes": ""
+    "notes": "",
+    "executors": {
+      "exec1": "ian",
+      "exec2": ""
+    }
   },
   {
     "id": "OH-BUI-05",
@@ -1301,10 +1332,7 @@
     "type": "Buiten",
     "category": "Schilderwerk",
     "title": "Brievenbus buitenkant opnieuw in de verf",
-    "priority": "Could",
     "status": "Backlog",
-    "owner": "ian",
-    "assignees": [],
     "estimate_hours": {
       "optimistic": 0.5,
       "realistic": 1,
@@ -1312,8 +1340,8 @@
     },
     "actual_hours": 0,
     "scheduled": {
-      "date": "",
-      "timeblock": ""
+      "start": "",
+      "end": ""
     },
     "dependencies": [],
     "definition_of_done": "Strak; roest/vlekvrij; dekkend.",
@@ -1328,7 +1356,11 @@
       "Schuren/ontvetten",
       "Verf"
     ],
-    "notes": ""
+    "notes": "",
+    "executors": {
+      "exec1": "ian",
+      "exec2": ""
+    }
   },
   {
     "id": "OH-BUI-06",
@@ -1338,10 +1370,7 @@
     "type": "Buiten",
     "category": "Schilderwerk",
     "title": "Voor- en achterdakkapel: zijpanelen (1 of beide) in de verf",
-    "priority": "Should",
     "status": "Backlog",
-    "owner": "ian",
-    "assignees": [],
     "estimate_hours": {
       "optimistic": 3,
       "realistic": 6,
@@ -1349,8 +1378,8 @@
     },
     "actual_hours": 0,
     "scheduled": {
-      "date": "",
-      "timeblock": ""
+      "start": "",
+      "end": ""
     },
     "dependencies": [],
     "definition_of_done": "Egale dekking; geen kleurverschil; netjes afgewerkt.",
@@ -1370,7 +1399,11 @@
       "Schilderen",
       "Controle"
     ],
-    "notes": "Let op veiligheid/hoogte."
+    "notes": "Let op veiligheid/hoogte.",
+    "executors": {
+      "exec1": "ian",
+      "exec2": ""
+    }
   },
   {
     "id": "OH-BUI-07",
@@ -1380,10 +1413,7 @@
     "type": "Buiten",
     "category": "Herstel",
     "title": "Dakkapel voorkant: teperen/bijwerken",
-    "priority": "Could",
     "status": "Backlog",
-    "owner": "ian",
-    "assignees": [],
     "estimate_hours": {
       "optimistic": 1,
       "realistic": 3,
@@ -1391,8 +1421,8 @@
     },
     "actual_hours": 0,
     "scheduled": {
-      "date": "",
-      "timeblock": ""
+      "start": "",
+      "end": ""
     },
     "dependencies": [],
     "definition_of_done": "Herstel strak; geen scheuren/losse stukken zichtbaar.",
@@ -1410,6 +1440,10 @@
       "Schuren",
       "Bijwerken"
     ],
-    "notes": "Maak concreet wat 'teperen' hier betekent."
+    "notes": "Maak concreet wat 'teperen' hier betekent.",
+    "executors": {
+      "exec1": "ian",
+      "exec2": ""
+    }
   }
 ]

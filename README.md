@@ -52,3 +52,11 @@ Open een klus → klik **Print callsheet** → kies **Opslaan als PDF** in je pr
 - Gebruik de switch **Balken/Kalender**.
 - Zoom: **Maand/Week/Dag** (Dag toont per uur).
 - Planning gebruikt alleen klussen met **datum + tijdvak** in het klusdetail.
+
+
+## v1.4 (Clean + IKEA)
+- Klus-ID's niet zichtbaar in overzichten.
+- Geen prioriteit (alles moet gebeuren).
+- Twee uitvoerders per klus: **Uitvoerder 1** en **Uitvoerder 2**.
+- Planning met **Start/Eind** (datum + tijd) voor meerdaagse klussen.
+- In Planning kun je met **◀ / ▶** door dag/week/maand bladeren.
