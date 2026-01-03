@@ -34,6 +34,17 @@ function slugify(s){
     .replace(/\-+/g, "-");
 }
 
+function fmtDateTime(iso){
+  if(!iso) return "–";
+  try{
+    const d = new Date(iso);
+    const pad = (x)=>String(x).padStart(2,"0");
+    return `${pad(d.getDate())}/${pad(d.getMonth()+1)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }catch(e){
+    return String(iso);
+  }
+}
+
 function fmtHours(n){
   if (n === null || n === undefined || n === "") return "–";
   const x = Number(n);
@@ -64,10 +75,6 @@ async function loadDefaults(){
   const [tasks, people] = await Promise.all([tasksRes.json(), peopleRes.json()]);
   return { tasks, people };
 }
-
-
-function getExec1(task){ return (task.assignees||[])[0] || ""; }
-function getExec2(task){ return (task.assignees||[])[1] || ""; }
 
 function getPersonName(id){
   const p = state.people.find(x => x.id === id);
@@ -126,7 +133,6 @@ function renderDashboard(){
   const sumActual = state.tasks.reduce((a,t)=>a + (Number(t.actual_hours)||0),0);
 
   const blocked = state.tasks.filter(t=>t.status.startsWith("Wacht")).length;
-
   document.getElementById("kpi-progress").textContent = `${progressPct}%`;
   document.getElementById("kpi-progress-note").textContent = `${done}/${total} afgerond`;
 
@@ -134,26 +140,139 @@ function renderDashboard(){
   document.getElementById("kpi-hours-note").textContent = `Werkelijk / Realistisch begroot`;
 
   document.getElementById("kpi-blocked").textContent = String(blocked);
-  
-  // upcoming table: Ingepland/Bezig sorted by date then title
-  const upcoming = state.tasks
-    .filter(t => ["Ingepland","Bezig","Wacht op materiaal","Wacht op hulp/afspraak"].includes(t.status))
-    .slice()
-    .sort((a,b)=>{
-      const da = a.scheduled?.date || "9999-12-31";
-      const db = b.scheduled?.date || "9999-12-31";
-      if(da !== db) return da.localeCompare(db);
+  // upcoming table: Ingepland/Bezig/Wacht sorted by start
+const upcoming = state.tasks
+  .filter(t => ["Ingepland","Bezig","Wacht op materiaal","Wacht op hulp/afspraak"].includes(t.status))
+  .filter(t => t.scheduled && (t.scheduled.start || t.scheduled.date))
+  .slice()
+  .sort((a,b)=>{
+    const sa = a.scheduled.start || (a.scheduled.date ? a.scheduled.date+"T00:00" : "9999-12-31T00:00");
+    const sb = b.scheduled.start || (b.scheduled.date ? b.scheduled.date+"T00:00" : "9999-12-31T00:00");
+    if(sa !== sb) return sa.localeCompare(sb);
       return (a.title||"").localeCompare(b.title||"");
     });
 
   const tbody = document.querySelector("#table-upcoming tbody");
   tbody.innerHTML = "";
   if(upcoming.length === 0){
-    const startTxt = t.scheduled?.start ? fmtDateTime(t.scheduled.start) : (t.scheduled?.date ? t.scheduled.date : "–");
+    tbody.appendChild(el("tr", {}, [
+      el("td", {colspan:"8", class:"muted"}, "Nog geen klussen ingepland. Tip: plan eerst OH-PRE (presentatie) en de Must-keukenpunten.")
+    ]));
+    return;
+  }
+
+  upcoming.forEach(t=>{
+    const dot = getStatusDot(t.status);
+    const statusCell = el("span", {class:"tag"}, [
+      el("span", {class:`dot ${dot}`}),
+      t.status
+    ]);
+
+    const startTxt = t.scheduled?.start ? fmtDateTime(t.scheduled.start) : (t.scheduled?.date || "–");
     const endTxt = t.scheduled?.end ? fmtDateTime(t.scheduled.end) : "–";
-    const exec1Txt = getPersonName(getExec1(t));
-    const exec2Txt = getPersonName(getExec2(t));
-    tbody.appendChild(el("tr", {class:"clickrow", onclick:(e)=>{ if(e.target && (e.target.tagName==="A" || e.target.closest("a"))) return; openTaskAndScroll(t.id);} }, [
+    const exec1Txt = getPersonName((t.assignees||[])[0]);
+    const exec2Txt = getPersonName((t.assignees||[])[1]);
+
+    tbody.appendChild(el("tr", {class:"clickrow", onclick:(e)=>{ if(e.target && (e.target.tagName==="A" || e.target.closest("a"))) return; switchView("tasks"); openTaskAndScroll(t.id);} }, [
+      el("td", {}, t.title),
+      el("td", {}, t.location || "–"),
+      el("td", {}, statusCell),
+      el("td", {}, startTxt),
+      el("td", {}, endTxt),
+      el("td", {}, exec1Txt),
+      el("td", {}, exec2Txt),
+      el("td", {}, el("a", {class:"action-link", href:"#", onclick:(e)=>{e.preventDefault(); switchView("tasks"); openTaskAndScroll(t.id);} }, "Open"))
+    ]));
+  });
+}
+
+function populateFilters(){
+  // status
+  const statusSel = document.getElementById("filter-status");
+  statusSel.innerHTML = "";
+  statusSel.appendChild(el("option", {value:""}, "Alle status"));
+  STATUSES.forEach(s => statusSel.appendChild(el("option", {value:s}, s)));
+
+  // group
+  const groups = Array.from(new Set(state.tasks.map(t=>t.group).filter(Boolean))).sort();
+  const groupSel = document.getElementById("filter-group");
+  groupSel.innerHTML = "";
+  groupSel.appendChild(el("option", {value:""}, "Alle groepen"));
+  groups.forEach(g => groupSel.appendChild(el("option", {value:g}, g)));
+
+  // assignee
+  const assSel = document.getElementById("filter-person");
+  assSel.innerHTML = "";
+  assSel.appendChild(el("option", {value:""}, "Iedereen"));
+  state.people
+    .slice()
+    .sort((a,b)=>a.name.localeCompare(b.name))
+    .forEach(p => assSel.appendChild(el("option", {value:p.id}, p.name)));
+}
+
+function applyTaskFilters(list){
+  const q = (document.getElementById("filter-search").value||"").trim().toLowerCase();
+  const st = document.getElementById("filter-status").value;
+  const gr = document.getElementById("filter-group").value;
+  const person = document.getElementById("filter-person").value;
+
+  return list.filter(t=>{
+    if(q){
+      const hay = `${t.title||""} ${t.location||""} ${t.group||""}`.toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    if(st && t.status !== st) return false;
+    if(gr && (t.group||"") !== gr) return false;
+    if(person){
+      const a1 = (t.assignees||[])[0] || "";
+      const a2 = (t.assignees||[])[1] || "";
+      if(a1 !== person && a2 !== person) return false;
+    }
+    return true;
+  });
+}
+
+
+function renderTasks(){
+  populateFilters();
+
+  const tbody = document.querySelector("#table-tasks tbody");
+  tbody.innerHTML = "";
+
+  const tasksSorted = state.tasks.slice().sort((a,b)=>{
+    const sa = STATUSES.indexOf(a.status);
+    const sb = STATUSES.indexOf(b.status);
+    if(sa !== sb) return sa - sb;
+
+    const aStart = a.scheduled?.start || (a.scheduled?.date ? a.scheduled.date+"T00:00" : "9999-12-31T00:00");
+    const bStart = b.scheduled?.start || (b.scheduled?.date ? b.scheduled.date+"T00:00" : "9999-12-31T00:00");
+    if(aStart !== bStart) return aStart.localeCompare(bStart);
+
+    return (a.title||"").localeCompare(b.title||"");
+  });
+
+  const filtered = applyTaskFilters(tasksSorted);
+
+  if(filtered.length === 0){
+    tbody.appendChild(el("tr", {}, [
+      el("td", {colspan:"10", class:"muted"}, "Geen resultaten met deze filters.")
+    ]));
+    return;
+  }
+
+  filtered.forEach(t=>{
+    const dot = getStatusDot(t.status);
+    const statusTag = el("span", {class:"tag"}, [
+      el("span", {class:`dot ${dot}`}),
+      t.status
+    ]);
+
+    const exec1Txt = getPersonName((t.assignees||[])[0]);
+    const exec2Txt = getPersonName((t.assignees||[])[1]);
+    const startTxt = t.scheduled?.start ? fmtDateTime(t.scheduled.start) : (t.scheduled?.date || "–");
+    const endTxt = t.scheduled?.end ? fmtDateTime(t.scheduled.end) : "–";
+
+    tbody.appendChild(el("tr", {}, [
       el("td", {}, t.title),
       el("td", {}, t.group || "–"),
       el("td", {}, t.location || "–"),
@@ -167,13 +286,14 @@ function renderDashboard(){
     ]));
   });
 
-  // wire filter changes
-  ["filter-search","filter-status","filter-group","filter-person","filter-must-removed"].forEach(id=>{
+  ["filter-search","filter-status","filter-group","filter-person"].forEach(id=>{
     const node = document.getElementById(id);
+    if(!node) return;
     node.oninput = () => renderTasks();
     node.onchange = () => renderTasks();
   });
 }
+
 
 function newTaskTemplate(){
   return {
@@ -184,13 +304,13 @@ function newTaskTemplate(){
     type: "Binnen",
     category: "",
     title: "Nieuwe klus",
-    priority: "" ,
+    priority: "",
     status: "Backlog",
-    owner: "ian",
+    owner: "",
     assignees: [],
     estimate_hours: { optimistic: 0, realistic: 0, worst: 0 },
     actual_hours: 0,
-    scheduled: { date: "", timeblock: "" },
+    scheduled: { date:"", timeblock:"", start:"", end:"" },
     dependencies: [],
     definition_of_done: "",
     materials: [],
@@ -228,14 +348,14 @@ function openTask(taskId){
   const drawer = document.getElementById("drawer");
   drawer.classList.remove("hidden");
 
-  document.getElementById("drawer-id").textContent = t.id;
   document.getElementById("drawer-title").textContent = t.title;
 
-  // fill status select
+  // status select
   const stSel = document.getElementById("f-status");
   stSel.innerHTML = "";
   STATUSES.forEach(s => stSel.appendChild(el("option", {value:s}, s)));
-  // fill executors selects
+
+  // executor selects
   const exec1Sel = document.getElementById("f-exec1");
   const exec2Sel = document.getElementById("f-exec2");
   exec1Sel.innerHTML = "";
@@ -247,19 +367,22 @@ function openTask(taskId){
     exec2Sel.appendChild(el("option", {value:p.id}, p.name));
   });
 
-  // basic fields
+  // basic
   document.getElementById("f-title").value = t.title || "";
   document.getElementById("f-project").value = t.project || "";
   document.getElementById("f-group").value = t.group || "";
   document.getElementById("f-location").value = t.location || "";
-  document.getElementById("f-priority").value = t.priority || "Should";
   document.getElementById("f-status").value = t.status || "Backlog";
-  document.getElementById("f-exec1").value = getExec1(t);
-  document.getElementById("f-exec2").value = getExec2(t);
 
+  // executors
+  document.getElementById("f-exec1").value = (t.assignees||[])[0] || "";
+  document.getElementById("f-exec2").value = (t.assignees||[])[1] || "";
+
+  // schedule
   document.getElementById("f-start").value = t.scheduled?.start || "";
   document.getElementById("f-end").value = t.scheduled?.end || "";
 
+  // hours
   document.getElementById("f-o").value = t.estimate_hours?.optimistic ?? 0;
   document.getElementById("f-r").value = t.estimate_hours?.realistic ?? 0;
   document.getElementById("f-w").value = t.estimate_hours?.worst ?? 0;
@@ -267,112 +390,118 @@ function openTask(taskId){
 
   document.getElementById("f-dod").value = t.definition_of_done || "";
 
-  // materials/tools/steps textareas
+  // materials/tools/steps
   document.getElementById("f-materials").value = (t.materials||[]).map(m=>{
-    if(typeof m === "string") return m;
-    return `${m.item||""} | ${m.qty||""} | ${m.status||""}`.trim();
+    const qty = m.qty || "";
+    const st = m.status || "";
+    return `${m.item||""}${qty? " | "+qty:""}${st? " | "+st:""}`.trim();
   }).join("\n");
-
   document.getElementById("f-tools").value = (t.tools||[]).join("\n");
   document.getElementById("f-steps").value = (t.steps||[]).join("\n");
   document.getElementById("f-notes").value = t.notes || "";
 }
 
 
+function renderAssigneeMulti(task){
+  const wrap =   wrap.innerHTML = "";
+  const selected = new Set(task.assignees || []);
+  state.people.slice().sort((a,b)=>a.name.localeCompare(b.name)).forEach(p=>{
+    const id = `ass-${p.id}`;
+    const chk = el("input", {type:"checkbox", id, "data-pid":p.id});
+    chk.checked = selected.has(p.id);
+    const pill = el("label", {class:"pill", for:id}, [chk, p.name]);
+    wrap.appendChild(pill);
+  });
+}
+
 function readTaskForm(){
-  const t = state.tasks.find(x=>x.id===state.selectedTaskId);
+  const id = state.selectedTaskId;
+  const t = state.tasks.find(x=>x.id===id);
   if(!t) return null;
 
-  t.title = document.getElementById("f-title").value.trim();
+  t.title = document.getElementById("f-title").value.trim() || t.title;
   t.project = document.getElementById("f-project").value.trim();
   t.group = document.getElementById("f-group").value.trim();
   t.location = document.getElementById("f-location").value.trim();
-  t.priority = document.getElementById("f-priority").value;
   t.status = document.getElementById("f-status").value;
 
-  t.scheduled = {
-    date: document.getElementById("f-date").value,
-    timeblock: document.getElementById("f-timeblock").value.trim()
-  };
+  const exec1 = document.getElementById("f-exec1").value;
+  const exec2 = document.getElementById("f-exec2").value;
+  t.assignees = [exec1, exec2].filter(Boolean);
 
+  if(!t.scheduled) t.scheduled = { date:"", timeblock:"", start:"", end:"" };
+  t.scheduled.start = document.getElementById("f-start").value;
+  t.scheduled.end = document.getElementById("f-end").value;
+
+  // keep legacy date in sync when start is set
+  if(t.scheduled.start){
+    try{
+      const s = new Date(t.scheduled.start);
+      const pad=(n)=>String(n).padStart(2,"0");
+      t.scheduled.date = `${s.getFullYear()}-${pad(s.getMonth()+1)}-${pad(s.getDate())}`;
+    }catch(e){}
+  }
+
+  // hours
   t.estimate_hours = {
-    optimistic: Number(document.getElementById("f-o").value || 0),
-    realistic: Number(document.getElementById("f-r").value || 0),
-    worst: Number(document.getElementById("f-w").value || 0),
+    optimistic: Number(document.getElementById("f-o").value||0),
+    realistic: Number(document.getElementById("f-r").value||0),
+    worst: Number(document.getElementById("f-w").value||0)
   };
+  t.actual_hours = Number(document.getElementById("f-actual").value||0);
 
-  t.actual_hours = Number(document.getElementById("f-actual").value || 0);
+  t.definition_of_done = document.getElementById("f-dod").value;
 
-  t.definition_of_done = document.getElementById("f-dod").value.trim();
-
-  t.assignees = [document.getElementById("f-exec1").value, document.getElementById("f-exec2").value].filter(Boolean);
-
-  // parse materials
-  const mLines = document.getElementById("f-materials").value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-  t.materials = mLines.map(line=>{
-    // allow either "a|b|c" or keep as string
-    const parts = line.split("|").map(x=>x.trim());
-    if(parts.length >= 2){
-      return { item: parts[0], qty: parts[1] || "", status: (parts[2]||"").trim() };
-    }
-    return line;
-  });
-
-  // tools, steps
-  t.tools = document.getElementById("f-tools").value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-  t.steps = document.getElementById("f-steps").value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-
-  t.notes = document.getElementById("f-notes").value.trim();
+  t.materials = parseMaterialsText(document.getElementById("f-materials").value);
+  t.tools = parseLines(document.getElementById("f-tools").value);
+  t.steps = parseLines(document.getElementById("f-steps").value);
+  t.notes = document.getElementById("f-notes").value;
 
   return t;
 }
 
+
 function buildPrintSheet(task){
-  const exec1 = getPersonName(getExec1(task));
-  const exec2 = getPersonName(getExec2(task));
-  
+  const exec1 = getPersonName((task.assignees||[])[0]);
+  const exec2 = getPersonName((task.assignees||[])[1]);
   const start = task.scheduled?.start ? fmtDateTime(task.scheduled.start) : "–";
   const end = task.scheduled?.end ? fmtDateTime(task.scheduled.end) : "–";
-  const hrs = task.estimate_hours || {};
-  const est = `${fmtHours(hrs.optimistic)} / ${fmtHours(hrs.realistic)} / ${fmtHours(hrs.worst)} u`;
 
   const mats = (task.materials||[]).map(m=>{
-    if(typeof m === "string") return `<li>${escapeHtml(m)}</li>`;
-    return `<li><strong>${escapeHtml(m.item||"")}</strong> — ${escapeHtml(m.qty||"")} <span class="muted">(${escapeHtml(m.status||"")})</span></li>`;
+    const qty = m.qty ? ` — ${escapeHtml(m.qty)}` : "";
+    const st = m.status ? ` (${escapeHtml(m.status)})` : "";
+    return `<li>${escapeHtml(m.item||"")}${qty}${st}</li>`;
   }).join("") || "<li>–</li>";
 
   const tools = (task.tools||[]).map(x=>`<li>${escapeHtml(x)}</li>`).join("") || "<li>–</li>";
   const steps = (task.steps||[]).map(x=>`<li>${escapeHtml(x)}</li>`).join("") || "<li>–</li>";
+  const dod = task.definition_of_done ? escapeHtml(task.definition_of_done) : "–";
+  const notes = task.notes ? escapeHtml(task.notes) : "–";
 
-  const html = `
-    <h1 class="ps-title">${escapeHtml(task.title)}</h1>
-    <div class="ps-meta">
-      <div><strong>Project:</strong> ${escapeHtml(task.project||"–")} • <strong>Groep:</strong> ${escapeHtml(task.group||"–")} • <strong>Locatie:</strong> ${escapeHtml(task.location||"–")}</div>
-      <div><strong>Status:</strong> ${escapeHtml(task.status||"–")} • <strong>Start:</strong> ${escapeHtml(start)} • <strong>Eind:</strong> ${escapeHtml(end)}</div>
+  return `
+    <div class="ps-header">
+      <div>
+        <div class="ps-title">${escapeHtml(task.title||"")}</div>
+        <div class="ps-sub">${escapeHtml(task.group||"–")} • ${escapeHtml(task.location||"–")}</div>
+      </div>
+      <div class="ps-meta">
+        <div><strong>Status:</strong> ${escapeHtml(task.status||"–")}</div>
+        <div><strong>Start:</strong> ${escapeHtml(start)}</div>
+        <div><strong>Eind:</strong> ${escapeHtml(end)}</div>
+      </div>
     </div>
 
     <div class="ps-grid">
       <div class="ps-box">
-        <h4>Mensen</h4>
+        <h4>Uitvoerders</h4>
         <p><strong>Uitvoerder 1:</strong> ${escapeHtml(exec1)}<br/>
         <strong>Uitvoerder 2:</strong> ${escapeHtml(exec2)}</p>
       </div>
       <div class="ps-box">
-        <h4>Tijd</h4>
-        <p><strong>Inschatting (O/R/W):</strong> ${escapeHtml(est)}<br/>
-        <strong>Werkelijk:</strong> ${escapeHtml(fmtHours(task.actual_hours))} u</p>
-      </div>
-      <div class="ps-box">
         <h4>Definition of Done</h4>
-        <p>${escapeHtml(task.definition_of_done||"–")}</p>
+        <p>${dod}</p>
       </div>
-      <div class="ps-box">
-        <h4>Notities</h4>
-        <p>${escapeHtml(task.notes||"–")}</p>
-      </div>
-    </div>
 
-    <div class="ps-grid">
       <div class="ps-box">
         <h4>Materialen</h4>
         <ul>${mats}</ul>
@@ -381,16 +510,19 @@ function buildPrintSheet(task){
         <h4>Tools</h4>
         <ul>${tools}</ul>
       </div>
-    </div>
 
-    <div class="ps-box ps-steps">
-      <h4>Stappen</h4>
-      <ol>${steps}</ol>
+      <div class="ps-box ps-full">
+        <h4>Stappenplan</h4>
+        <ul>${steps}</ul>
+      </div>
+      <div class="ps-box ps-full">
+        <h4>Notities</h4>
+        <p>${notes}</p>
+      </div>
     </div>
   `;
-
-  return html;
 }
+
 
 function escapeHtml(s){
   return String(s ?? "")
@@ -662,9 +794,10 @@ function scheduledTasksInRange(range){
       const end = new Date(t.scheduled.end);
       return { task: t, start, end };
     })
-    .filter(x=> x.end > range.start && x.start < range.end) // overlaps
+    .filter(x => x.end > range.start && x.start < range.end)
     .sort((a,b)=> (a.start - b.start) || ((a.task.title||"").localeCompare(b.task.title||"")));
 }
+
 
 function statusClass(t){
   if(t.status === "Afgerond") return "done";
@@ -699,7 +832,6 @@ function buildGantt(range){
 
   grid.style.gridTemplateColumns = `${labelW}px repeat(${cols}, ${colW}px)`;
 
-  // header
   grid.appendChild(el("div", {class:"gantt-cell gantt-head gantt-label"}, "Klus"));
   labels.forEach(l=> grid.appendChild(el("div", {class:"gantt-cell gantt-head"}, l)));
 
@@ -710,8 +842,9 @@ function buildGantt(range){
   }
 
   items.forEach(({task, start, end})=>{
-    const exec1 = getPersonName(getExec1(task));
-    const exec2 = getPersonName(getExec2(task));
+    const exec1 = getPersonName((task.assignees||[])[0]);
+    const exec2 = getPersonName((task.assignees||[])[1]);
+
     const label = el("div", {class:"gantt-cell gantt-label"}, [
       el("div", {style:"font-weight:900"}, `${task.title}`),
       el("div", {class:"small"}, `${task.group || "–"} • ${task.location || "–"} • ${exec1}${exec2 && exec2!=="–" ? " + " + exec2 : ""}`)
@@ -725,10 +858,8 @@ function buildGantt(range){
     let startPos = 0, endPos = cols;
 
     if(range.unit === "hour"){
-      const dayStart = new Date(range.start);
-      const dayEnd = new Date(range.end);
-      const s = new Date(Math.max(start.getTime(), dayStart.getTime()));
-      const e = new Date(Math.min(end.getTime(), dayEnd.getTime()));
+      const s = new Date(Math.max(start.getTime(), range.start.getTime()));
+      const e = new Date(Math.min(end.getTime(), range.end.getTime()));
       const startMin = s.getHours()*60 + s.getMinutes();
       const endMin = e.getHours()*60 + e.getMinutes();
       startPos = clamp(startMin/60, 0, 24);
@@ -747,13 +878,11 @@ function buildGantt(range){
     const left = startPos * colW + 6;
     const width = Math.max(24, (endPos - startPos) * colW - 12);
 
-    const bar = el("div", {
-      class:`gantt-bar ${statusClass(task)}`,
-      style:`left:${left}px; width:${width}px;`
-    }, [
+    const bar = el("div", { class:`gantt-bar ${statusClass(task)}`, style:`left:${left}px; width:${width}px;` }, [
       el("span", {}, task.title),
       el("span", {class:"tiny"}, `(${fmtDateTime(task.scheduled.start)} → ${fmtDateTime(task.scheduled.end)})`)
     ]);
+
     bar.onclick = ()=>{ switchView("tasks"); openTaskAndScroll(task.id); };
     track.appendChild(bar);
   });
@@ -761,11 +890,11 @@ function buildGantt(range){
   return wrap;
 }
 
+
 function buildCalendar(range){
   const items = scheduledTasksInRange(range);
   const byDate = new Map();
 
-  // place each task on every day it overlaps
   items.forEach(({task, start, end})=>{
     const cur = new Date(start); cur.setHours(0,0,0,0);
     const last = new Date(end); last.setHours(0,0,0,0);
@@ -831,22 +960,26 @@ function buildCalendar(range){
     const key = ymd(d);
     const cell = el("div", {class:"cal-day"});
     cell.appendChild(el("div", {class:"cal-day-num"}, String(d.getDate())));
+
     const list = (byDate.get(key)||[]).slice(0,3);
     list.forEach(({task})=>{
       const chip = el("div", {class:`cal-chip ${statusClass(task)}`}, `${task.title}`);
       chip.onclick = (e)=>{ e.stopPropagation(); switchView("tasks"); openTaskAndScroll(task.id); };
       cell.appendChild(chip);
     });
+
     const extra = (byDate.get(key)||[]).length - list.length;
     if(extra>0){
       cell.appendChild(el("div", {class:"small"}, `+${extra} meer…`));
     }
+
     cell.onclick = ()=>{ state.planning.zoom = "day"; state.planning.focusDate = key; renderPlanning(); };
     monthGrid.appendChild(cell);
   }
 
   return cal;
 }
+
 
 function buildDayAgenda(range, byDate){
   const date = ymd(range.start);
@@ -868,18 +1001,17 @@ function buildDayAgenda(range, byDate){
 
   const pxPerMin = 56/60;
   list.forEach(({task, start, end})=>{
-    const dayStart = new Date(range.start);
-    const dayEnd = new Date(range.end);
-    const s = new Date(Math.max(start.getTime(), dayStart.getTime()));
-    const e = new Date(Math.min(end.getTime(), dayEnd.getTime()));
+    const s = new Date(Math.max(start.getTime(), range.start.getTime()));
+    const e = new Date(Math.min(end.getTime(), range.end.getTime()));
     const startMin = s.getHours()*60 + s.getMinutes();
     const endMin = e.getHours()*60 + e.getMinutes();
 
     const top = startMin * pxPerMin;
     const height = Math.max(34, (endMin - startMin) * pxPerMin);
 
-    const exec1 = getPersonName(getExec1(task));
-    const exec2 = getPersonName(getExec2(task));
+    const exec1 = getPersonName((task.assignees||[])[0]);
+    const exec2 = getPersonName((task.assignees||[])[1]);
+
     const block = el("div", {class:`agenda-block ${statusClass(task)}`, style:`top:${top}px; height:${height}px;`}, [
       el("div", {}, `${fmtDateTime(task.scheduled.start)} → ${fmtDateTime(task.scheduled.end)} — ${task.title}`),
       el("div", {class:"tiny"}, `${task.location||"–"} • ${exec1}${exec2 && exec2!=="–" ? " + " + exec2 : ""}`)
@@ -894,6 +1026,7 @@ function buildDayAgenda(range, byDate){
 
   return wrap;
 }
+
 
 function setPlanningButtons(){
   // mode buttons
@@ -932,23 +1065,24 @@ function wirePlanningControls(){
     document.getElementById("zoom-day").onclick = ()=>{ state.planning.zoom = "day"; renderPlanning(); };
 
     document.getElementById("plan-prev").onclick = ()=>{
-      const d = new Date((state.planning.focusDate || ymd(new Date())) + "T00:00:00");
-      if(state.planning.zoom === "day") d.setDate(d.getDate()-1);
-      else if(state.planning.zoom === "week") d.setDate(d.getDate()-7);
-      else d.setMonth(d.getMonth()-1);
-      state.planning.focusDate = ymd(d);
-      renderPlanning();
-    };
-    document.getElementById("plan-next").onclick = ()=>{
-      const d = new Date((state.planning.focusDate || ymd(new Date())) + "T00:00:00");
-      if(state.planning.zoom === "day") d.setDate(d.getDate()+1);
-      else if(state.planning.zoom === "week") d.setDate(d.getDate()+7);
-      else d.setMonth(d.getMonth()+1);
-      state.planning.focusDate = ymd(d);
-      renderPlanning();
-    };
+  const d = new Date((state.planning.focusDate || ymd(new Date())) + "T00:00:00");
+  if(state.planning.zoom === "day") d.setDate(d.getDate()-1);
+  else if(state.planning.zoom === "week") d.setDate(d.getDate()-7);
+  else d.setMonth(d.getMonth()-1);
+  state.planning.focusDate = ymd(d);
+  renderPlanning();
+};
 
-    document.getElementById("plan-today").onclick = ()=>{
+document.getElementById("plan-next").onclick = ()=>{
+  const d = new Date((state.planning.focusDate || ymd(new Date())) + "T00:00:00");
+  if(state.planning.zoom === "day") d.setDate(d.getDate()+1);
+  else if(state.planning.zoom === "week") d.setDate(d.getDate()+7);
+  else d.setMonth(d.getMonth()+1);
+  state.planning.focusDate = ymd(d);
+  renderPlanning();
+};
+
+document.getElementById("plan-today").onclick = ()=>{
       state.planning.focusDate = ymd(new Date());
       renderPlanning();
     };
@@ -998,31 +1132,31 @@ async function init(){
     saveToStorage();
   }
 
-  // --- Migration (v1.4): scheduled.date/timeblock -> scheduled.start/end (for multi-day planning) ---
-  const parseTB = (tb)=>{
-    const m = String(tb||"").trim().match(/(\d{1,2}):(\d{2})\s*[–-]\s*(\d{1,2}):(\d{2})/);
-    if(!m) return null;
-    return {sh:+m[1], sm:+m[2], eh:+m[3], em:+m[4]};
-  };
-  state.tasks.forEach(t=>{
-    if(!t.scheduled) t.scheduled = {date:"", timeblock:"", start:"", end:""};
-    if(!t.scheduled.start && t.scheduled.date){
-      const tb = parseTB(t.scheduled.timeblock||"");
-      const sh = tb ? tb.sh : 9, sm = tb ? tb.sm : 0;
-      const eh = tb ? tb.eh : 17, em = tb ? tb.em : 0;
+// Migration v1.5: ensure scheduled.start/end exist (from legacy date/timeblock) and cap assignees to 2.
+state.tasks.forEach(t=>{
+  if(!t.scheduled) t.scheduled = { date:"", timeblock:"", start:"", end:"" };
+  if(!t.scheduled.start && t.scheduled.date){
+    const tb = parseTimeblock(t.scheduled.timeblock || "");
+    const sh = tb ? Math.floor(tb.startMin/60) : 9;
+    const sm = tb ? tb.startMin%60 : 0;
+    const eh = tb ? Math.floor(tb.endMin/60) : 17;
+    const em = tb ? tb.endMin%60 : 0;
+    const pad = (n)=>String(n).padStart(2,"0");
+    t.scheduled.start = `${t.scheduled.date}T${pad(sh)}:${pad(sm)}`;
+    t.scheduled.end = `${t.scheduled.date}T${pad(eh)}:${pad(em)}`;
+  }
+  if(t.scheduled.start && !t.scheduled.end){
+    try{
+      const s = new Date(t.scheduled.start);
+      s.setHours(s.getHours()+1);
       const pad=(n)=>String(n).padStart(2,"0");
-      t.scheduled.start = `${t.scheduled.date}T${pad(sh)}:${pad(sm)}`;
-      t.scheduled.end = `${t.scheduled.date}T${pad(eh)}:${pad(em)}`;
-    }
-    if(!t.scheduled.end && t.scheduled.start){
-      try{
-        const d = new Date(t.scheduled.start);
-        d.setHours(d.getHours()+1);
-        const pad=(n)=>String(n).padStart(2,"0");
-        t.scheduled.end = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-      }catch(e){}
-    }
-  });
+      t.scheduled.end = `${s.getFullYear()}-${pad(s.getMonth()+1)}-${pad(s.getDate())}T${pad(s.getHours())}:${pad(s.getMinutes())}`;
+    }catch(e){}
+  }
+  if(!Array.isArray(t.assignees)) t.assignees = [];
+  t.assignees = t.assignees.slice(0,2);
+  t.priority = "";
+});
 
   wireUI();
   renderDashboard();

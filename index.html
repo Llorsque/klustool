@@ -30,43 +30,24 @@
     <!-- DASHBOARD -->
     <section id="view-dashboard" class="view">
       <div class="grid cards">
-        <div class="card">
-          <div class="card-label">Voortgang</div>
-          <div class="card-value" id="kpi-progress">–</div>
-          <div class="card-note" id="kpi-progress-note">–</div>
-        </div>
-        <div class="card">
-          <div class="card-label">Uren (realistisch)</div>
-          <div class="card-value" id="kpi-hours">–</div>
-          <div class="card-note" id="kpi-hours-note">–</div>
-        </div>
-        <div class="card">
-          <div class="card-label">Blokkades</div>
-          <div class="card-value" id="kpi-blocked">–</div>
-          <div class="card-note">Wacht op materiaal / hulp</div>
-        </div>
-      </div>
-          <div class="card-value" id="kpi-progress">–</div>
-          <div class="card-note" id="kpi-progress-note">–</div>
-        </div>
-        <div class="card">
-          <div class="card-label">Uren (realistisch)</div>
-          <div class="card-value" id="kpi-hours">–</div>
-          <div class="card-note" id="kpi-hours-note">–</div>
-        </div>
-        <div class="card">
-          <div class="card-label">Blokkades</div>
-          <div class="card-value" id="kpi-blocked">–</div>
-          <div class="card-note">Wacht op materiaal / hulp</div>
-        </div>
-        <div class="card">
-          <div class="card-label">Must-taken open</div>
-          <div class="card-value" id="kpi-must">–</div>
-          <div class="card-note">Cruciaal voor verkoop/afwerking</div>
-        </div>
-      </div>
+    <div class="card">
+      <div class="card-label">Voortgang</div>
+      <div class="card-value" id="kpi-progress">–</div>
+      <div class="card-note" id="kpi-progress-note">–</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Uren (realistisch)</div>
+      <div class="card-value" id="kpi-hours">–</div>
+      <div class="card-note" id="kpi-hours-note">–</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Blokkades</div>
+      <div class="card-value" id="kpi-blocked">–</div>
+      <div class="card-note">Wacht op materiaal / hulp</div>
+    </div>
+  </div>
 
-      <div class="panel">
+  <div class="panel">
         <div class="panel-head">
           <h2>Komende planning (Ingepland / Bezig)</h2>
           <div class="panel-actions">
@@ -108,7 +89,7 @@
           <select id="filter-status"></select>
           <select id="filter-group"></select>
           <select id="filter-person"></select>
-          <button class="btn secondary" id="btn-clear-filters">Reset filters</button>
+<button class="btn secondary" id="btn-clear-filters">Reset filters</button>
         </div>
 
         <div class="table-wrap">
@@ -136,7 +117,7 @@
       <section class="drawer hidden" id="drawer">
         <div class="drawer-head">
           <div>
-            <h3 id="drawer-title">–</h3>
+<h3 id="drawer-title">–</h3>
           </div>
           <div class="drawer-actions">
             <button class="btn secondary" id="btn-print">Print callsheet</button>
@@ -163,30 +144,29 @@
               <label>Locatie</label>
               <input id="f-location" type="text" />
             </div>
-
-            <div class="field">
+<div class="field">
               <label>Status</label>
               <select id="f-status"></select>
             </div>
 
             <div class="field">
-              <label>Uitvoerder 1</label>
-              <select id="f-exec1"></select>
-            </div>
-            <div class="field">
-              <label>Uitvoerder 2</label>
-              <select id="f-exec2"></select>
-            </div>
+          <label>Uitvoerder 1</label>
+          <select id="f-exec1"></select>
+        </div>
+        <div class="field">
+          <label>Uitvoerder 2</label>
+          <select id="f-exec2"></select>
+        </div>
             </div>
 
             <div class="field">
-              <label>Start (datum & tijd)</label>
-              <input id="f-start" type="datetime-local" />
-            </div>
-            <div class="field">
-              <label>Eind (datum & tijd)</label>
-              <input id="f-end" type="datetime-local" />
-            </div>
+          <label>Start (datum & tijd)</label>
+          <input id="f-start" type="datetime-local" />
+        </div>
+        <div class="field">
+          <label>Eind (datum & tijd)</label>
+          <input id="f-end" type="datetime-local" />
+        </div>
 
             <div class="field">
               <label>Uren inschatting (optimistisch)</label>
@@ -339,22 +319,8 @@
         </div>
 
         <div class="grid cards">
-        <div class="card">
-          <div class="card-label">Voortgang</div>
-          <div class="card-value" id="kpi-progress">–</div>
-          <div class="card-note" id="kpi-progress-note">–</div>
-        </div>
-        <div class="card">
-          <div class="card-label">Uren (realistisch)</div>
-          <div class="card-value" id="kpi-hours">–</div>
-          <div class="card-note" id="kpi-hours-note">–</div>
-        </div>
-        <div class="card">
-          <div class="card-label">Blokkades</div>
-          <div class="card-value" id="kpi-blocked">–</div>
-          <div class="card-note">Wacht op materiaal / hulp</div>
-        </div>
-      </div>
+          <div class="card">
+            <div class="card-label">Export</div>
             <div class="card-note">Download je huidige data (klussen + personen) als één JSON-bestand.</div>
             <button class="btn" id="btn-export">Export JSON</button>
           </div>

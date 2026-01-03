@@ -54,9 +54,9 @@ Open een klus → klik **Print callsheet** → kies **Opslaan als PDF** in je pr
 - Planning gebruikt alleen klussen met **datum + tijdvak** in het klusdetail.
 
 
-## v1.4 (Fix navigatie + Clean)
-- Tabs werken weer (JS gefixt).
-- Overzichten zonder klus-ID's.
-- Uitvoerder 1/2 via twee dropdowns.
-- Start/Eind datum+tijd voor (meerdaagse) klussen.
-- Planning met ◀/▶.
+## v1.5
+- Fix: hele pagina werkt weer (syntax + runtime).
+- Clean overview: geen klus-ID’s zichtbaar, geen prio.
+- Uitvoerder 1 & 2 per klus.
+- Start/Eind datum+tijd (meerdaags).
+- Planning: balken/kalender + zoom + ◀/▶ navigatie.
