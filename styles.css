@@ -474,3 +474,29 @@ body{
 /* subtle feedback */
 .shake{ animation: shake .35s linear; }
 @keyframes shake{ 0%{transform:translateX(0)} 25%{transform:translateX(-3px)} 50%{transform:translateX(3px)} 75%{transform:translateX(-2px)} 100%{transform:translateX(0)} }
+
+/* Toast */
+.toast{
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  min-width: 260px;
+  max-width: calc(100vw - 32px);
+  padding: 12px 14px;
+  border-radius: 999px;
+  background: #111;
+  color: #fff;
+  box-shadow: 0 18px 40px rgba(0,0,0,.22);
+  font-weight: 700;
+  font-size: 14px;
+  z-index: 9999;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+}
+.toast.ok{ background:#0f172a; }
+.toast.warn{ background:#7c2d12; }
+.toast.err{ background:#7f1d1d; }
+.toast.hidden{ display:none; }

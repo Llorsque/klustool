@@ -64,7 +64,24 @@ function loadFromStorage(){
 }
 
 function saveToStorage(){
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({ tasks: state.tasks, people: state.people }));
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ tasks: state.tasks, people: state.people }));
+    return true;
+  }catch(err){
+    console.error("saveToStorage failed", err);
+    return false;
+  }
+}
+
+
+function showToast(message, kind="ok"){
+  const elToast = document.getElementById("toast");
+  if(!elToast) return;
+  elToast.textContent = message;
+  elToast.classList.remove("hidden","ok","warn","err");
+  elToast.classList.add(kind);
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(()=>{ elToast.classList.add("hidden"); }, 1800);
 }
 
 async function loadDefaults(){
@@ -144,7 +161,7 @@ function renderDashboard(){
   document.getElementById("kpi-blocked").textContent = String(blocked);
   // upcoming table: Ingepland/Bezig/Wacht sorted by start
 const upcoming = state.tasks
-  .filter(t => ["Ingepland","Bezig","Wacht op materiaal","Wacht op hulp/afspraak"].includes(t.status))
+  .filter(t => (t.status||"") !== "Afgerond")
   .filter(t => t.scheduled && (t.scheduled.start || t.scheduled.date))
   .slice()
   .sort((a,b)=>{
@@ -688,30 +705,47 @@ function wireUI(){
   };
 
   document.getElementById("btn-save").onclick = (e)=>{
-    if(e){ e.preventDefault(); }
+    if(e){ e.preventDefault(); e.stopPropagation(); }
     const btn = document.getElementById("btn-save");
     try{
       const t = readTaskForm();
       if(!t){
-        // no selected task -> nothing to save
         btn.classList.add("shake");
         setTimeout(()=>btn.classList.remove("shake"), 400);
+        showToast("Geen klus geselecteerd.", "warn");
         return;
       }
-      // update drawer title
-      document.getElementById("drawer-title").textContent = t.title;
-      saveToStorage();
-      renderTasks();
-      renderDashboard();
 
-      // subtle inline feedback (no popup dependency)
+      // normalize start/end if both set
+      if(t.scheduled?.start && t.scheduled?.end){
+        const s = new Date(t.scheduled.start);
+        const en = new Date(t.scheduled.end);
+        if(en <= s){
+          s.setHours(s.getHours()+1);
+          const pad=(n)=>String(n).padStart(2,"0");
+          t.scheduled.end = `${s.getFullYear()}-${pad(s.getMonth()+1)}-${pad(s.getDate())}T${pad(s.getHours())}:${pad(s.getMinutes())}`;
+        }
+      }
+
+      // update drawer title
+      const dt = document.getElementById("drawer-title");
+      if(dt) dt.textContent = t.title;
+
+      const stored = saveToStorage();
+
+      // re-render views safely (never block saving)
+      try{ renderTasks(); }catch(err){ console.error("renderTasks failed", err); }
+      try{ renderDashboard(); }catch(err){ console.error("renderDashboard failed", err); }
+
+      showToast(stored ? "Opgeslagen ✅" : "Opgeslagen (maar niet bewaard in browser) ⚠️", stored ? "ok" : "warn");
+
       const old = btn.textContent;
       btn.textContent = "Opgeslagen ✅";
       btn.disabled = true;
-      setTimeout(()=>{ btn.textContent = old; btn.disabled = false; }, 900);
+      setTimeout(()=>{ btn.textContent = old; btn.disabled = false; }, 700);
     }catch(err){
       console.error(err);
-      alert("Opslaan mislukt. Open je browser-console voor details.");
+      showToast("Opslaan mislukt. Check console.", "err");
     }
   };
 
