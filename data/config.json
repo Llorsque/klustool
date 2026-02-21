@@ -16,14 +16,19 @@
       "color": "#C5952E"
     },
     {
-      "id": "nieuw-huis",
-      "name": "Nieuw huis",
+      "id": "wielsterdyk",
+      "name": "Wielsterdyk",
       "color": "#9B6FB5"
     },
     {
       "id": "logistiek",
       "name": "Logistiek",
       "color": "#DC6B3F"
+    },
+    {
+      "id": "mesdagstraat",
+      "name": "Mesdagstraat",
+      "color": "#4A8C9F"
     }
   ],
   "statuses": [
