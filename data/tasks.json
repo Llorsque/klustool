@@ -509,11 +509,11 @@
     "category": "Schilderwerk",
     "title": "Kozijnen - buiten",
     "priority": "",
-    "status": "Backlog",
+    "status": "Ingepland",
     "owner": "",
     "assignees": [
-      "justin",
-      "willem"
+      "willem",
+      "justin"
     ],
     "estimate_hours": {
       "optimistic": 0,
@@ -522,10 +522,10 @@
     },
     "actual_hours": 0,
     "scheduled": {
-      "date": "",
+      "date": "2026-03-16",
       "timeblock": "",
-      "start": "",
-      "end": ""
+      "start": "2026-03-16",
+      "end": "2026-03-16T01:00"
     },
     "dependencies": [],
     "definition_of_done": "Schuur, achterraam, brievenbus, zijkant dakkapel voor",
@@ -535,7 +535,7 @@
     "notes": "",
     "inCalendar": true,
     "subtasks": [],
-    "allDay": false
+    "allDay": true
   },
   {
     "id": "TASK-015",
