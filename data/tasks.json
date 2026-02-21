@@ -496,5 +496,40 @@
     "steps": [],
     "notes": "",
     "inCalendar": true
+  },
+  {
+    "id": "TASK-014",
+    "project": "Wielsterdyk",
+    "group": "Wielsterdyk",
+    "location": "",
+    "type": "",
+    "category": "",
+    "title": "Woonkamer",
+    "priority": "",
+    "status": "Backlog",
+    "owner": "",
+    "assignees": [
+      "justin",
+      "martje"
+    ],
+    "estimate_hours": {
+      "optimistic": 0,
+      "realistic": 0,
+      "worst": 0
+    },
+    "actual_hours": 0,
+    "scheduled": {
+      "date": "2026-07-20",
+      "timeblock": "",
+      "start": "2026-07-20T09:00",
+      "end": "2026-08-07T17:00"
+    },
+    "dependencies": [],
+    "definition_of_done": "",
+    "materials": [],
+    "tools": [],
+    "steps": [],
+    "notes": "",
+    "inCalendar": true
   }
 ]
