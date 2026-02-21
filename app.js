@@ -1,1271 +1,1433 @@
-/* Klusplanner – client-side (localStorage)
-   - Startdata: /data/tasks.json + /data/people.json
-   - Persist: localStorage key "klusplanner_v1"
-*/
+/* ================================================================
+   KLUSPLANNER PRO — v2.0
+   Complete rewrite: GitHub collab backend, 3 view modes,
+   flexible groups/labels, iCal sync, warm Todoist/Asana UI
+   ================================================================ */
 
-const STORAGE_KEY = "klusplanner_v1";
+// ─── Constants ─────────────────────────────────────────────
+const STORAGE_KEY   = "klusplanner_v2";
+const CONFIG_KEY    = "klusplanner_config";
+const STATUSES      = ["Backlog","Ingepland","Bezig","Wacht op materiaal","Wacht op hulp/afspraak","Afgerond"];
 
-const STATUSES = [
-  "Backlog",
-  "Ingepland",
-  "Bezig",
-  "Wacht op materiaal",
-  "Wacht op hulp/afspraak",
-  "Afgerond"
+const GROUP_COLORS  = [
+  "#5B8A72","#6B8FBF","#C5952E","#9B6FB5","#DC6B3F",
+  "#4A8C9F","#B5694D","#7B886E","#8B6EA8","#CC7A6E",
+  "#5C7EA3","#9D8B5E","#6D9B8F","#A67BAB","#C49058"
 ];
 
+const DEFAULT_GROUPS = [
+  { id: "binnen",      name: "Binnen",       color: "#5B8A72" },
+  { id: "buiten",      name: "Buiten",       color: "#6B8FBF" },
+  { id: "pre-verkoop", name: "Pre-verkoop",  color: "#C5952E" },
+  { id: "nieuw-huis",  name: "Nieuw huis",   color: "#9B6FB5" },
+  { id: "logistiek",   name: "Logistiek",    color: "#DC6B3F" }
+];
+
+// ─── State ─────────────────────────────────────────────────
 let state = {
   tasks: [],
   people: [],
+  groups: [...DEFAULT_GROUPS],
   selectedTaskId: null,
-  planning: {
-    mode: "gantt", // gantt | calendar
-    zoom: "week",  // month | week | day
-    focusDate: null // YYYY-MM-DD
+  currentView: "dashboard",
+  overzicht: {
+    mode: "list",       // list | gantt | agenda
+    agendaZoom: "month",// month | week | day
+    ganttZoom: "month",
+    focusDate: todayYmd()
   }
 };
 
-function slugify(s){
-  return (s||"")
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, "-")
-    .replace(/[^a-z0-9\-]/g, "")
-    .replace(/\-+/g, "-");
-}
+let githubConfig = null;  // { token, owner, repo }
+let isOnline     = false;
+let tasksSha     = null;
+let peopleSha    = null;
+let groupsSha    = null;
 
+// ─── Utility ───────────────────────────────────────────────
+function $(id)       { return document.getElementById(id); }
+function $$(sel)     { return document.querySelectorAll(sel); }
+function todayYmd()  { return ymd(new Date()); }
+function ymd(d)      { const p=n=>String(n).padStart(2,"0"); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`; }
+function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
+function startOfWeek(d){ const x=new Date(d); x.setDate(x.getDate()-((x.getDay()+6)%7)); x.setHours(0,0,0,0); return x; }
+function clamp(n,a,b){ return Math.max(a,Math.min(b,n)); }
+
+function fmtDate(iso){
+  if(!iso) return "–";
+  try { const d=new Date(iso); const p=n=>String(n).padStart(2,"0"); return `${p(d.getDate())}/${p(d.getMonth()+1)}`; } catch(e){ return iso; }
+}
 function fmtDateTime(iso){
   if(!iso) return "–";
-  try{
-    const d = new Date(iso);
-    const pad = (x)=>String(x).padStart(2,"0");
-    return `${pad(d.getDate())}/${pad(d.getMonth()+1)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  }catch(e){
-    return String(iso);
-  }
+  try { const d=new Date(iso); const p=n=>String(n).padStart(2,"0"); return `${p(d.getDate())}/${p(d.getMonth()+1)} ${p(d.getHours())}:${p(d.getMinutes())}`; } catch(e){ return iso; }
 }
-
 function fmtHours(n){
-  if (n === null || n === undefined || n === "") return "–";
-  const x = Number(n);
-  if (Number.isNaN(x)) return "–";
-  return x % 1 === 0 ? String(x) : String(x).replace(".", ",");
+  if(n==null||n===""||isNaN(n)) return "–";
+  return Number(n)%1===0?String(Number(n)):Number(n).toFixed(1).replace(".",",");
 }
+function escHtml(s){ return String(s??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+function slugify(s){ return (s||"").toLowerCase().trim().replace(/\s+/g,"-").replace(/[^a-z0-9\-]/g,"").replace(/-+/g,"-"); }
 
-function loadFromStorage(){
-  try{
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if(!raw) return null;
-    return JSON.parse(raw);
-  }catch(e){
-    console.warn("Storage parse failed", e);
-    return null;
-  }
+function statusClass(status){
+  if(status==="Afgerond") return "done";
+  if(status==="Backlog") return "backlog";
+  return "active";
 }
-
-function saveToStorage(){
-  try{
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ tasks: state.tasks, people: state.people }));
-    return true;
-  }catch(err){
-    console.error("saveToStorage failed", err);
-    return false;
-  }
-}
-
-
-function showToast(message, kind="ok"){
-  const elToast = document.getElementById("toast");
-  if(!elToast) return;
-  elToast.textContent = message;
-  elToast.classList.remove("hidden","ok","warn","err");
-  elToast.classList.add(kind);
-  clearTimeout(showToast._t);
-  showToast._t = setTimeout(()=>{ elToast.classList.add("hidden"); }, 1800);
-}
-
-async function loadDefaults(){
-  const [tasksRes, peopleRes] = await Promise.all([
-    fetch("data/tasks.json"),
-    fetch("data/people.json")
-  ]);
-  const [tasks, people] = await Promise.all([tasksRes.json(), peopleRes.json()]);
-  return { tasks, people };
-}
+function getStatusDot(status){ return statusClass(status); }
 
 function getPersonName(id){
-  const p = state.people.find(x => x.id === id);
-  return p ? p.name : (id || "–");
+  if(!id) return "–";
+  const p=state.people.find(x=>x.id===id);
+  return p?p.name:id;
+}
+function getGroupObj(groupId){
+  return state.groups.find(g=>g.id===groupId) || state.groups.find(g=>g.name===groupId) || { id:groupId, name:groupId||"–", color:"#78716C" };
+}
+function getGroupColor(groupName){
+  const g=state.groups.find(x=>x.name===groupName||x.id===groupName);
+  return g?g.color:"#78716C";
 }
 
-function getStatusDot(status){
-  if(status === "Afgerond") return "good";
-  if(status.startsWith("Wacht")) return "warn";
-  if(status === "Bezig") return "warn";
-  return "bad";
+// ─── Toast ────────────────────────────────────────────────
+function toast(msg, kind="ok"){
+  const el=$("toast");
+  if(!el) return;
+  el.textContent=msg;
+  el.classList.remove("hidden","ok","warn","err");
+  el.classList.add(kind);
+  clearTimeout(toast._t);
+  toast._t=setTimeout(()=>el.classList.add("hidden"), 2200);
 }
 
-function el(tag, attrs={}, children=[]){
-  const node = document.createElement(tag);
-  Object.entries(attrs).forEach(([k,v])=>{
-    if(k === "class") node.className = v;
-    else if(k.startsWith("on") && typeof v === "function") node.addEventListener(k.slice(2), v);
-    else if(k === "html") node.innerHTML = v;
-    else node.setAttribute(k, v);
-  });
-  (Array.isArray(children) ? children : [children]).forEach(c=>{
-    if(c === null || c === undefined) return;
-    if(typeof c === "string") node.appendChild(document.createTextNode(c));
+// ─── DOM helper ───────────────────────────────────────────
+function h(tag, attrs={}, children=[]){
+  const node=document.createElement(tag);
+  for(const [k,v] of Object.entries(attrs)){
+    if(k==="class") node.className=v;
+    else if(k==="html") node.innerHTML=v;
+    else if(k==="style"&&typeof v==="object") Object.assign(node.style,v);
+    else if(k.startsWith("on")&&typeof v==="function") node.addEventListener(k.slice(2),v);
+    else node.setAttribute(k,v);
+  }
+  (Array.isArray(children)?children:[children]).forEach(c=>{
+    if(c==null) return;
+    if(typeof c==="string"||typeof c==="number") node.appendChild(document.createTextNode(String(c)));
     else node.appendChild(c);
   });
   return node;
 }
 
-function switchView(view){
-  document.querySelectorAll(".tab").forEach(t=>{
-    t.classList.toggle("active", t.dataset.view === view);
-  });
-  document.querySelectorAll(".view").forEach(v => v.classList.add("hidden"));
-  document.getElementById(`view-${view}`).classList.remove("hidden");
+// ─── Materials parser ─────────────────────────────────────
+function parseMaterialsText(text){
+  return (text||"").split("\n").map(line=>{
+    const t=line.trim();
+    if(!t) return null;
+    const parts=t.split("|").map(p=>p.trim());
+    return { item:parts[0]||"", qty:parts[1]||"", status:parts[2]||"" };
+  }).filter(Boolean);
+}
+function materialsToText(mats){
+  return (mats||[]).map(m=>{
+    if(typeof m==="string") return m;
+    return [m.item||"",m.qty||"",m.status||""].filter(Boolean).join(" | ");
+  }).join("\n");
+}
+function parseLines(text){ return (text||"").split("\n").map(l=>l.trim()).filter(Boolean); }
 
-  // close drawer when leaving tasks view
-  if(view !== "tasks"){
-    document.getElementById("drawer").classList.add("hidden");
-    state.selectedTaskId = null;
+// ─── Schedule helper ──────────────────────────────────────
+function ensureSchedule(t){
+  if(!t.scheduled||typeof t.scheduled!=="object") t.scheduled={date:"",timeblock:"",start:"",end:""};
+  if(!t.scheduled.start&&t.scheduled.date){
+    t.scheduled.start=t.scheduled.date+"T09:00";
+    t.scheduled.end=t.scheduled.date+"T17:00";
   }
-
-  if(view === "dashboard") renderDashboard();
-  if(view === "planning") renderPlanning();
-  if(view === "tasks") renderTasks();
-  if(view === "people") renderPeople();
-  if(view === "materials") renderMaterials();
+  if(t.scheduled.start&&!t.scheduled.end){
+    try { const s=new Date(t.scheduled.start); s.setHours(s.getHours()+1); const p=n=>String(n).padStart(2,"0"); t.scheduled.end=`${s.getFullYear()}-${p(s.getMonth()+1)}-${p(s.getDate())}T${p(s.getHours())}:${p(s.getMinutes())}`; } catch(e){}
+  }
+  if(!Array.isArray(t.assignees)) t.assignees=[];
 }
 
+// ═══════════════════════════════════════════════════════════
+// GITHUB API
+// ═══════════════════════════════════════════════════════════
+async function ghFetch(path, opts={}){
+  const url=`https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}/contents/${path}`;
+  const headers={ "Authorization":`Bearer ${githubConfig.token}`, "Accept":"application/vnd.github.v3+json", ...opts.headers };
+  const res=await fetch(url, { ...opts, headers });
+  if(!res.ok){
+    const err=await res.json().catch(()=>({}));
+    throw new Error(err.message||`GitHub API ${res.status}`);
+  }
+  return res.json();
+}
+
+async function ghRead(path){
+  const data=await ghFetch(path);
+  const content=atob(data.content.replace(/\n/g,""));
+  return { content: JSON.parse(content), sha: data.sha };
+}
+
+async function ghWrite(path, content, sha, message){
+  const encoded=btoa(unescape(encodeURIComponent(JSON.stringify(content,null,2))));
+  const body={ message, content:encoded };
+  if(sha) body.sha=sha;
+  const data=await ghFetch(path, { method:"PUT", body:JSON.stringify(body) });
+  return data.content.sha;
+}
+
+async function ghValidate(){
+  try {
+    await ghFetch("", { method:"GET" });
+    return true;
+  } catch(e){ return false; }
+}
+
+async function syncFromGitHub(){
+  if(!githubConfig) return;
+  try {
+    updateSyncIndicator("syncing");
+    const [tasksData, peopleData] = await Promise.all([
+      ghRead("data/tasks.json").catch(()=>null),
+      ghRead("data/people.json").catch(()=>null)
+    ]);
+    let groupsData=null;
+    try { groupsData=await ghRead("data/groups.json"); } catch(e){}
+
+    if(tasksData){ state.tasks=tasksData.content; tasksSha=tasksData.sha; }
+    if(peopleData){ state.people=peopleData.content; peopleSha=peopleData.sha; }
+    if(groupsData){ state.groups=groupsData.content; groupsSha=groupsData.sha; }
+
+    state.tasks.forEach(t=>ensureSchedule(t));
+    saveLocal();
+    updateSyncIndicator("online");
+    return true;
+  } catch(e){
+    console.error("Sync from GitHub failed:", e);
+    updateSyncIndicator("error");
+    toast("Sync mislukt: "+e.message, "err");
+    return false;
+  }
+}
+
+async function syncToGitHub(){
+  if(!githubConfig) return;
+  try {
+    updateSyncIndicator("syncing");
+    const [newTasksSha, newPeopleSha] = await Promise.all([
+      ghWrite("data/tasks.json", state.tasks, tasksSha, "Update tasks"),
+      ghWrite("data/people.json", state.people, peopleSha, "Update people")
+    ]);
+    tasksSha=newTasksSha;
+    peopleSha=newPeopleSha;
+
+    // Also save groups
+    const newGroupsSha=await ghWrite("data/groups.json", state.groups, groupsSha, "Update groups").catch(()=>null);
+    if(newGroupsSha) groupsSha=newGroupsSha;
+
+    updateSyncIndicator("online");
+    toast("Gesynchroniseerd ✓");
+    return true;
+  } catch(e){
+    console.error("Sync to GitHub failed:", e);
+    updateSyncIndicator("error");
+    if(e.message.includes("409")){
+      toast("Conflict: iemand anders heeft gewijzigd. Haal eerst op.", "warn");
+    } else {
+      toast("Sync mislukt: "+e.message, "err");
+    }
+    return false;
+  }
+}
+
+function updateSyncIndicator(status){
+  const dot=$("sync-indicator")?.querySelector(".sync-dot");
+  const label=$("sync-label");
+  if(!dot||!label) return;
+  dot.classList.remove("online","syncing");
+  if(status==="online"){ dot.classList.add("online"); label.textContent="Verbonden"; isOnline=true; }
+  else if(status==="syncing"){ dot.classList.add("syncing"); label.textContent="Syncing..."; }
+  else if(status==="error"){ label.textContent="Sync fout"; }
+  else { label.textContent="Offline"; isOnline=false; }
+}
+
+// ─── Local storage ────────────────────────────────────────
+function saveLocal(){
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify({tasks:state.tasks,people:state.people,groups:state.groups})); } catch(e){}
+}
+function loadLocal(){
+  try { const d=JSON.parse(localStorage.getItem(STORAGE_KEY)); if(d?.tasks) return d; } catch(e){} return null;
+}
+function saveConfig(){
+  if(!githubConfig) { localStorage.removeItem(CONFIG_KEY); return; }
+  try { localStorage.setItem(CONFIG_KEY, JSON.stringify(githubConfig)); } catch(e){}
+}
+function loadConfig(){
+  try { return JSON.parse(localStorage.getItem(CONFIG_KEY)); } catch(e){ return null; }
+}
+
+// ─── Save (auto-sync if online) ──────────────────────────
+async function save(silent=false){
+  saveLocal();
+  if(githubConfig){
+    await syncToGitHub();
+  } else if(!silent){
+    toast("Opgeslagen ✓");
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════════════
+function switchView(view){
+  state.currentView=view;
+  $$(".nav-item[data-view]").forEach(btn=>{
+    btn.classList.toggle("active", btn.dataset.view===view);
+  });
+  $$(".view").forEach(v=>v.classList.add("hidden"));
+  $(`view-${view}`)?.classList.remove("hidden");
+
+  const titles={dashboard:"Dashboard",overzicht:"Overzicht",materials:"Materialen",people:"Personen",settings:"Instellingen"};
+  $("page-title").textContent=titles[view]||view;
+
+  if(view==="dashboard") renderDashboard();
+  else if(view==="overzicht") renderOverzicht();
+  else if(view==="materials") renderMaterials();
+  else if(view==="people") renderPeople();
+  else if(view==="settings") renderSettings();
+
+  // close mobile sidebar
+  $("sidebar")?.classList.remove("open");
+}
+
+// ═══════════════════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════════════════
 function renderDashboard(){
-  // harden schedule data
-  state.tasks.forEach(t=>{ try{ ensureSchedule(t); }catch(e){} });
-  const total = state.tasks.length;
-  const done = state.tasks.filter(t=>t.status==="Afgerond").length;
-  const progressPct = total ? Math.round((done/total)*100) : 0;
+  state.tasks.forEach(t=>ensureSchedule(t));
+  const total=state.tasks.length;
+  const done=state.tasks.filter(t=>t.status==="Afgerond").length;
+  const pct=total?Math.round(done/total*100):0;
+  const sumR=state.tasks.reduce((a,t)=>a+(Number(t.estimate_hours?.realistic)||0),0);
+  const sumA=state.tasks.reduce((a,t)=>a+(Number(t.actual_hours)||0),0);
+  const blocked=state.tasks.filter(t=>(t.status||"").startsWith("Wacht")).length;
+  const scheduled=state.tasks.filter(t=>t.scheduled?.start&&t.status!=="Afgerond").length;
 
-  const sumRealistic = state.tasks.reduce((a,t)=>a + (Number(t.estimate_hours?.realistic)||0),0);
-  const sumActual = state.tasks.reduce((a,t)=>a + (Number(t.actual_hours)||0),0);
+  const kpi=$("kpi-grid");
+  kpi.innerHTML="";
+  const cards=[
+    { label:"Voortgang", value:`${pct}%`, sub:`${done} / ${total} afgerond`, bar:pct, barColor:"var(--success)" },
+    { label:"Uren", value:`${fmtHours(sumA)} / ${fmtHours(sumR)}`, sub:"Werkelijk / Begroot", bar:sumR?Math.min(100,Math.round(sumA/sumR*100)):0, barColor:"var(--primary)" },
+    { label:"Blokkades", value:String(blocked), sub:"Wacht op materiaal / hulp", bar:0 },
+    { label:"Ingepland", value:String(scheduled), sub:"Klussen met datum", bar:0 }
+  ];
+  cards.forEach(c=>{
+    const card=h("div",{class:"kpi-card"},[
+      h("div",{class:"kpi-label"},c.label),
+      h("div",{class:"kpi-value"},c.value),
+      h("div",{class:"kpi-sub"},c.sub),
+      c.bar>0?h("div",{class:"kpi-bar"},[h("div",{class:"kpi-bar-fill",style:{width:c.bar+"%",background:c.barColor}})]):null
+    ]);
+    kpi.appendChild(card);
+  });
 
-  const blocked = state.tasks.filter(t=>t.status.startsWith("Wacht")).length;
-  document.getElementById("kpi-progress").textContent = `${progressPct}%`;
-  document.getElementById("kpi-progress-note").textContent = `${done}/${total} afgerond`;
+  // Upcoming
+  const upcoming=state.tasks
+    .filter(t=>t.status!=="Afgerond"&&t.scheduled?.start)
+    .sort((a,b)=>(a.scheduled.start||"").localeCompare(b.scheduled.start||""))
+    .slice(0,8);
 
-  document.getElementById("kpi-hours").textContent = `${fmtHours(sumActual)} / ${fmtHours(sumRealistic)} u`;
-  document.getElementById("kpi-hours-note").textContent = `Werkelijk / Realistisch begroot`;
-
-  document.getElementById("kpi-blocked").textContent = String(blocked);
-  // upcoming table: Ingepland/Bezig/Wacht sorted by start
-const upcoming = state.tasks
-  .filter(t => (t.status||"") !== "Afgerond")
-  .filter(t => t.scheduled && (t.scheduled.start || t.scheduled.date))
-  .slice()
-  .sort((a,b)=>{
-    const sa = a.scheduled.start || (a.scheduled.date ? a.scheduled.date+"T00:00" : "9999-12-31T00:00");
-    const sb = b.scheduled.start || (b.scheduled.date ? b.scheduled.date+"T00:00" : "9999-12-31T00:00");
-    if(sa !== sb) return sa.localeCompare(sb);
-      return (a.title||"").localeCompare(b.title||"");
+  const list=$("upcoming-list");
+  list.innerHTML="";
+  if(!upcoming.length){
+    list.innerHTML=`<div class="empty-state"><p>Nog geen ingeplande klussen</p></div>`;
+  } else {
+    upcoming.forEach(t=>{
+      const gc=getGroupColor(t.group);
+      list.appendChild(h("div",{class:"upcoming-item",onclick:()=>openTaskModal(t.id)},[
+        h("div",{class:"upcoming-dot",style:{background:gc}}),
+        h("div",{class:"upcoming-info"},[
+          h("div",{class:"upcoming-title"},t.title),
+          h("div",{class:"upcoming-meta"},`${t.group||"–"} · ${t.location||"–"} · ${getPersonName((t.assignees||[])[0])}`)
+        ]),
+        h("div",{class:"upcoming-date"},fmtDateTime(t.scheduled.start))
+      ]));
     });
-
-  const tbody = document.querySelector("#table-upcoming tbody");
-  tbody.innerHTML = "";
-  if(upcoming.length === 0){
-    tbody.appendChild(el("tr", {}, [
-      el("td", {colspan:"8", class:"muted"}, "Nog geen klussen ingepland. Tip: plan eerst OH-PRE (presentatie) en de Must-keukenpunten.")
-    ]));
-    return;
   }
 
-  upcoming.forEach(t=>{
-    const dot = getStatusDot(t.status);
-    const statusCell = el("span", {class:"tag"}, [
-      el("span", {class:`dot ${dot}`}),
-      t.status
-    ]);
-
-    const startTxt = t.scheduled?.start ? fmtDateTime(t.scheduled.start) : (t.scheduled?.date || "–");
-    const endTxt = t.scheduled?.end ? fmtDateTime(t.scheduled.end) : "–";
-    const exec1Txt = getPersonName((t.assignees||[])[0]);
-    const exec2Txt = getPersonName((t.assignees||[])[1]);
-
-    tbody.appendChild(el("tr", {class:"clickrow", onclick:(e)=>{ if(e.target && (e.target.tagName==="A" || e.target.closest("a"))) return; switchView("tasks"); openTaskAndScroll(t.id);} }, [
-      el("td", {}, t.title),
-      el("td", {}, t.location || "–"),
-      el("td", {}, statusCell),
-      el("td", {}, startTxt),
-      el("td", {}, endTxt),
-      el("td", {}, exec1Txt),
-      el("td", {}, exec2Txt),
-      el("td", {}, el("a", {class:"action-link", href:"#", onclick:(e)=>{e.preventDefault(); switchView("tasks"); openTaskAndScroll(t.id);} }, "Open"))
+  // Group summary
+  const gs=$("group-summary");
+  gs.innerHTML="";
+  const groupMap=new Map();
+  state.tasks.forEach(t=>{
+    const g=t.group||"Overig";
+    if(!groupMap.has(g)) groupMap.set(g,{total:0,done:0});
+    groupMap.get(g).total++;
+    if(t.status==="Afgerond") groupMap.get(g).done++;
+  });
+  Array.from(groupMap.entries()).sort((a,b)=>b[1].total-a[1].total).forEach(([name,info])=>{
+    const pct=info.total?Math.round(info.done/info.total*100):0;
+    const gc=getGroupColor(name);
+    gs.appendChild(h("div",{class:"group-row"},[
+      h("div",{class:"group-color",style:{background:gc}}),
+      h("div",{class:"group-name"},name),
+      h("div",{class:"group-count"},`${info.done}/${info.total}`),
+      h("div",{class:"group-bar-wrap"},[h("div",{class:"group-bar",style:{width:pct+"%",background:gc}})])
     ]));
   });
+}
+
+// ═══════════════════════════════════════════════════════════
+// OVERZICHT (3-in-1)
+// ═══════════════════════════════════════════════════════════
+function renderOverzicht(){
+  state.tasks.forEach(t=>ensureSchedule(t));
+  populateFilters();
+  updateOverzichtControls();
+
+  const content=$("overzicht-content");
+  content.innerHTML="";
+
+  if(state.overzicht.mode==="list") renderListView(content);
+  else if(state.overzicht.mode==="gantt") renderGanttView(content);
+  else if(state.overzicht.mode==="agenda") renderAgendaView(content);
+}
+
+function updateOverzichtControls(){
+  $$(".mode-btn[data-mode]").forEach(b=>b.classList.toggle("active",b.dataset.mode===state.overzicht.mode));
+  $("agenda-controls")?.classList.toggle("hidden",state.overzicht.mode!=="agenda");
+  $("gantt-controls")?.classList.toggle("hidden",state.overzicht.mode!=="gantt");
+
+  $$(".mode-btn[data-zoom]").forEach(b=>b.classList.toggle("active",b.dataset.zoom===state.overzicht.agendaZoom));
+  $$(".mode-btn[data-gzoom]").forEach(b=>b.classList.toggle("active",b.dataset.gzoom===state.overzicht.ganttZoom));
+
+  // Update labels
+  const fd=new Date(state.overzicht.focusDate+"T00:00:00");
+  const months=["Januari","Februari","Maart","April","Mei","Juni","Juli","Augustus","September","Oktober","November","December"];
+
+  if(state.overzicht.mode==="agenda"){
+    const z=state.overzicht.agendaZoom;
+    let label="";
+    if(z==="month") label=`${months[fd.getMonth()]} ${fd.getFullYear()}`;
+    else if(z==="week"){ const ws=startOfWeek(fd); const we=addDays(ws,6); label=`${fmtDate(ymd(ws))} – ${fmtDate(ymd(we))}`; }
+    else label=fd.toLocaleDateString("nl-NL",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+    if($("cal-label")) $("cal-label").textContent=label;
+  }
+  if(state.overzicht.mode==="gantt"){
+    const z=state.overzicht.ganttZoom;
+    let label="";
+    if(z==="month") label=`${months[fd.getMonth()]} ${fd.getFullYear()}`;
+    else { const ws=startOfWeek(fd); const we=addDays(ws,6); label=`${fmtDate(ymd(ws))} – ${fmtDate(ymd(we))}`; }
+    if($("gantt-label")) $("gantt-label").textContent=label;
+  }
 }
 
 function populateFilters(){
-  // status
-  const statusSel = document.getElementById("filter-status");
-  statusSel.innerHTML = "";
-  statusSel.appendChild(el("option", {value:""}, "Alle status"));
-  STATUSES.forEach(s => statusSel.appendChild(el("option", {value:s}, s)));
+  const statusSel=$("filter-status");
+  const val=statusSel.value;
+  statusSel.innerHTML='<option value="">Alle statussen</option>';
+  STATUSES.forEach(s=>statusSel.appendChild(h("option",{value:s},s)));
+  statusSel.value=val;
 
-  // group
-  const groups = Array.from(new Set(state.tasks.map(t=>t.group).filter(Boolean))).sort();
-  const groupSel = document.getElementById("filter-group");
-  groupSel.innerHTML = "";
-  groupSel.appendChild(el("option", {value:""}, "Alle groepen"));
-  groups.forEach(g => groupSel.appendChild(el("option", {value:g}, g)));
+  const groupSel=$("filter-group");
+  const gval=groupSel.value;
+  groupSel.innerHTML='<option value="">Alle groepen</option>';
+  const groups=[...new Set(state.tasks.map(t=>t.group).filter(Boolean))].sort();
+  groups.forEach(g=>groupSel.appendChild(h("option",{value:g},g)));
+  groupSel.value=gval;
 
-  // assignee
-  const assSel = document.getElementById("filter-person");
-  assSel.innerHTML = "";
-  assSel.appendChild(el("option", {value:""}, "Iedereen"));
-  state.people
-    .slice()
-    .sort((a,b)=>a.name.localeCompare(b.name))
-    .forEach(p => assSel.appendChild(el("option", {value:p.id}, p.name)));
+  const personSel=$("filter-person");
+  const pval=personSel.value;
+  personSel.innerHTML='<option value="">Alle personen</option>';
+  state.people.slice().sort((a,b)=>a.name.localeCompare(b.name)).forEach(p=>personSel.appendChild(h("option",{value:p.id},p.name)));
+  personSel.value=pval;
+
+  const projSel=$("filter-project");
+  const prval=projSel.value;
+  projSel.innerHTML='<option value="">Alle projecten</option>';
+  const projects=[...new Set(state.tasks.map(t=>t.project).filter(Boolean))].sort();
+  projects.forEach(p=>projSel.appendChild(h("option",{value:p},p)));
+  projSel.value=prval;
 }
 
-function applyTaskFilters(list){
-  const q = (document.getElementById("filter-search").value||"").trim().toLowerCase();
-  const st = document.getElementById("filter-status").value;
-  const gr = document.getElementById("filter-group").value;
-  const person = document.getElementById("filter-person").value;
+function getFilteredTasks(){
+  const q=($("filter-search")?.value||"").trim().toLowerCase();
+  const st=$("filter-status")?.value||"";
+  const gr=$("filter-group")?.value||"";
+  const pe=$("filter-person")?.value||"";
+  const pr=$("filter-project")?.value||"";
 
-  return list.filter(t=>{
-    if(q){
-      const hay = `${t.title||""} ${t.location||""} ${t.group||""}`.toLowerCase();
-      if(!hay.includes(q)) return false;
-    }
-    if(st && t.status !== st) return false;
-    if(gr && (t.group||"") !== gr) return false;
-    if(person){
-      const a1 = (t.assignees||[])[0] || "";
-      const a2 = (t.assignees||[])[1] || "";
-      if(a1 !== person && a2 !== person) return false;
+  return state.tasks.filter(t=>{
+    if(q&&!`${t.title||""} ${t.location||""} ${t.group||""} ${t.category||""}`.toLowerCase().includes(q)) return false;
+    if(st&&t.status!==st) return false;
+    if(gr&&t.group!==gr) return false;
+    if(pr&&t.project!==pr) return false;
+    if(pe){
+      const a1=(t.assignees||[])[0]||"";
+      const a2=(t.assignees||[])[1]||"";
+      if(a1!==pe&&a2!==pe) return false;
     }
     return true;
   });
 }
 
-
-function renderTasks(){
-  // harden schedule data
-  state.tasks.forEach(t=>{ try{ ensureSchedule(t); }catch(e){} });
-  populateFilters();
-
-  const tbody = document.querySelector("#table-tasks tbody");
-  tbody.innerHTML = "";
-
-  const tasksSorted = state.tasks.slice().sort((a,b)=>{
-    const sa = STATUSES.indexOf(a.status);
-    const sb = STATUSES.indexOf(b.status);
-    if(sa !== sb) return sa - sb;
-
-    const aStart = a.scheduled?.start || (a.scheduled?.date ? a.scheduled.date+"T00:00" : "9999-12-31T00:00");
-    const bStart = b.scheduled?.start || (b.scheduled?.date ? b.scheduled.date+"T00:00" : "9999-12-31T00:00");
-    if(aStart !== bStart) return aStart.localeCompare(bStart);
-
+// ─── LIST VIEW ────────────────────────────────────────────
+function renderListView(container){
+  const filtered=getFilteredTasks().sort((a,b)=>{
+    const si=STATUSES.indexOf(a.status)-STATUSES.indexOf(b.status);
+    if(si!==0) return si;
+    const sa=a.scheduled?.start||"9999";
+    const sb=b.scheduled?.start||"9999";
+    if(sa!==sb) return sa.localeCompare(sb);
     return (a.title||"").localeCompare(b.title||"");
   });
 
-  const filtered = applyTaskFilters(tasksSorted);
-
-  if(filtered.length === 0){
-    tbody.appendChild(el("tr", {}, [
-      el("td", {colspan:"10", class:"muted"}, "Geen resultaten met deze filters.")
-    ]));
+  if(!filtered.length){
+    container.innerHTML=`<div class="empty-state"><p>Geen klussen gevonden met deze filters.</p></div>`;
     return;
   }
 
+  const table=h("table",{class:"data-table"});
+  const thead=h("thead",{},[h("tr",{},[
+    h("th",{},"Klus"),
+    h("th",{},"Groep"),
+    h("th",{},"Locatie"),
+    h("th",{},"Status"),
+    h("th",{},"Uitvoerder"),
+    h("th",{},"Start"),
+    h("th",{},"Uren (R)")
+  ])]);
+  table.appendChild(thead);
+
+  const tbody=h("tbody");
   filtered.forEach(t=>{
-    const dot = getStatusDot(t.status);
-    const statusTag = el("span", {class:"tag"}, [
-      el("span", {class:`dot ${dot}`}),
-      t.status
-    ]);
+    const gc=getGroupColor(t.group);
+    const sc=statusClass(t.status);
+    const exec=[getPersonName((t.assignees||[])[0]),getPersonName((t.assignees||[])[1])].filter(x=>x!=="–").join(", ")||"–";
 
-    const exec1Txt = getPersonName((t.assignees||[])[0]);
-    const exec2Txt = getPersonName((t.assignees||[])[1]);
-    const startTxt = t.scheduled?.start ? fmtDateTime(t.scheduled.start) : (t.scheduled?.date || "–");
-    const endTxt = t.scheduled?.end ? fmtDateTime(t.scheduled.end) : "–";
-
-    tbody.appendChild(el("tr", {}, [
-      el("td", {}, t.title),
-      el("td", {}, t.group || "–"),
-      el("td", {}, t.location || "–"),
-      el("td", {}, statusTag),
-      el("td", {}, exec1Txt),
-      el("td", {}, exec2Txt),
-      el("td", {class:"small"}, startTxt),
-      el("td", {class:"small"}, endTxt),
-      el("td", {}, fmtHours(t.estimate_hours?.realistic)),
-      el("td", {}, el("a", {class:"action-link", href:"#", onclick:(e)=>{e.preventDefault(); openTaskAndScroll(t.id);} }, "Open"))
+    tbody.appendChild(h("tr",{onclick:()=>openTaskModal(t.id)},[
+      h("td",{},[h("span",{style:{fontWeight:"600"}},t.title)]),
+      h("td",{},[h("span",{class:"group-badge",style:{borderColor:gc+"55",background:gc+"15",color:gc}},t.group||"–")]),
+      h("td",{class:"cell-muted"},t.location||"–"),
+      h("td",{},[h("span",{class:`status-badge ${sc}`},[h("span",{class:"dot"}),t.status])]),
+      h("td",{class:"cell-small"},exec),
+      h("td",{class:"cell-small"},t.scheduled?.start?fmtDateTime(t.scheduled.start):"–"),
+      h("td",{class:"cell-small"},fmtHours(t.estimate_hours?.realistic))
     ]));
   });
+  table.appendChild(tbody);
 
-  ["filter-search","filter-status","filter-group","filter-person"].forEach(id=>{
-    const node = document.getElementById(id);
-    if(!node) return;
-    node.oninput = () => renderTasks();
-    node.onchange = () => renderTasks();
-  });
+  const wrap=h("div",{class:"table-wrap",style:{background:"var(--surface)",border:"1px solid var(--border)",borderRadius:"var(--radius-lg)",overflow:"hidden",boxShadow:"var(--shadow-sm)"}});
+  wrap.appendChild(table);
+  container.appendChild(wrap);
 }
 
+// ─── GANTT VIEW ───────────────────────────────────────────
+function renderGanttView(container){
+  const filtered=getFilteredTasks().filter(t=>t.scheduled?.start&&t.scheduled?.end);
+  const fd=new Date(state.overzicht.focusDate+"T00:00:00");
 
-function newTaskTemplate(){
-  return {
-    id: generateTaskId("OH-NEW"),
-    project: "Oud huis",
-    group: "Binnen",
-    location: "",
-    type: "Binnen",
-    category: "",
-    title: "Nieuwe klus",
-    priority: "",
-    status: "Backlog",
-    owner: "",
-    assignees: [],
-    estimate_hours: { optimistic: 0, realistic: 0, worst: 0 },
-    actual_hours: 0,
-    scheduled: { date:"", timeblock:"", start:"", end:"" },
-    dependencies: [],
-    definition_of_done: "",
-    materials: [],
-    tools: [],
-    steps: [],
-    notes: ""
-  };
-}
-
-function generateTaskId(prefix){
-  // prefix like OH-BIN or OH-PRE etc
-  const existing = new Set(state.tasks.map(t=>t.id));
-  let n = 1;
-  while(true){
-    const id = `${prefix}-${String(n).padStart(3,"0")}`;
-    if(!existing.has(id)) return id;
-    n++;
+  let rangeStart, rangeEnd, cols, colLabels;
+  if(state.overzicht.ganttZoom==="week"){
+    rangeStart=startOfWeek(fd);
+    rangeEnd=addDays(rangeStart,7);
+    cols=7;
+    const days=["Ma","Di","Wo","Do","Vr","Za","Zo"];
+    colLabels=Array.from({length:7},(_,i)=>{
+      const d=addDays(rangeStart,i);
+      return `${days[i]} ${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}`;
+    });
+  } else {
+    rangeStart=new Date(fd.getFullYear(),fd.getMonth(),1);
+    rangeEnd=new Date(fd.getFullYear(),fd.getMonth()+1,1);
+    cols=Math.round((rangeEnd-rangeStart)/(864e5));
+    colLabels=Array.from({length:cols},(_,i)=>{
+      const d=addDays(rangeStart,i);
+      return String(d.getDate()).padStart(2,"0");
+    });
   }
+
+  const items=filtered.filter(t=>{
+    const s=new Date(t.scheduled.start), e=new Date(t.scheduled.end);
+    return e>rangeStart&&s<rangeEnd;
+  }).sort((a,b)=>(a.scheduled.start||"").localeCompare(b.scheduled.start||""));
+
+  if(!items.length){
+    container.innerHTML=`<div class="empty-state" style="background:var(--surface);border-radius:var(--radius-lg);border:1px solid var(--border)"><p>Geen ingeplande klussen in deze periode.</p></div>`;
+    return;
+  }
+
+  const labelW=280;
+  const colW=state.overzicht.ganttZoom==="week"?100:36;
+  const gc=h("div",{class:"gantt-container"});
+  const grid=h("div",{class:"gantt-grid",style:{gridTemplateColumns:`${labelW}px repeat(${cols},${colW}px)`}});
+
+  // Header
+  grid.appendChild(h("div",{class:"gantt-hcell",style:{position:"sticky",left:"0",zIndex:"4",minWidth:labelW+"px"}},"Klus"));
+  colLabels.forEach(l=>grid.appendChild(h("div",{class:"gantt-hcell"},l)));
+
+  // Rows
+  items.forEach(t=>{
+    const exec=[getPersonName((t.assignees||[])[0]),getPersonName((t.assignees||[])[1])].filter(x=>x!=="–").join(" + ")||"–";
+    grid.appendChild(h("div",{class:"gantt-label-cell"},[
+      h("div",{class:"gantt-label-title"},t.title),
+      h("div",{class:"gantt-label-meta"},`${t.group||"–"} · ${t.location||"–"} · ${exec}`)
+    ]));
+
+    const track=h("div",{style:{gridColumn:`span ${cols}`,position:"relative",height:"52px",borderBottom:"1px solid var(--border)"}});
+
+    const s=new Date(t.scheduled.start), e=new Date(t.scheduled.end);
+    let startIdx,endIdx;
+    if(state.overzicht.ganttZoom==="week"){
+      startIdx=Math.max(0,(s-rangeStart)/864e5);
+      endIdx=Math.min(cols,(e-rangeStart)/864e5);
+    } else {
+      startIdx=Math.max(0,(s.setHours(0,0,0,0),new Date(s)-rangeStart)/864e5);
+      endIdx=Math.min(cols,Math.ceil((e-rangeStart)/864e5));
+    }
+    if(endIdx<=startIdx) endIdx=startIdx+0.5;
+
+    const left=startIdx*colW+4;
+    const width=Math.max(24,(endIdx-startIdx)*colW-8);
+    const sc=statusClass(t.status);
+
+    const bar=h("div",{class:`gantt-bar ${sc}`,style:{left:left+"px",width:width+"px"},onclick:()=>openTaskModal(t.id)},t.title);
+    track.appendChild(bar);
+    grid.appendChild(track);
+  });
+
+  gc.appendChild(grid);
+  container.appendChild(gc);
 }
 
-function openTaskAndScroll(taskId){
-  openTask(taskId);
-  const drawer = document.getElementById("drawer");
-  drawer.scrollIntoView({behavior:"smooth", block:"start"});
-  // focus first field
-  const title = document.getElementById("f-title");
-  if(title) title.focus();
+// ─── AGENDA VIEW ──────────────────────────────────────────
+function renderAgendaView(container){
+  const zoom=state.overzicht.agendaZoom;
+  if(zoom==="month") renderMonthAgenda(container);
+  else if(zoom==="week") renderWeekAgenda(container);
+  else renderDayAgenda(container);
 }
 
-function openTask(taskId){
-  const t = state.tasks.find(x=>x.id===taskId);
+function getScheduledTasksByDate(rangeStart,rangeEnd){
+  const filtered=getFilteredTasks().filter(t=>t.scheduled?.start);
+  const byDate=new Map();
+  filtered.forEach(t=>{
+    const s=new Date(t.scheduled.start);
+    const e=t.scheduled.end?new Date(t.scheduled.end):new Date(s.getTime()+36e5);
+    if(e<=rangeStart||s>=rangeEnd) return;
+    for(let d=new Date(Math.max(s,rangeStart)); d<rangeEnd&&d<e; d=addDays(d,1)){
+      const key=ymd(d);
+      if(!byDate.has(key)) byDate.set(key,[]);
+      byDate.get(key).push(t);
+    }
+  });
+  return byDate;
+}
+
+function renderMonthAgenda(container){
+  const fd=new Date(state.overzicht.focusDate+"T00:00:00");
+  const firstDay=new Date(fd.getFullYear(),fd.getMonth(),1);
+  const lastDay=new Date(fd.getFullYear(),fd.getMonth()+1,0);
+  const startDow=(firstDay.getDay()+6)%7;
+  const gridStart=addDays(firstDay,-startDow);
+  const totalCells=Math.ceil((startDow+lastDay.getDate())/7)*7;
+  const gridEnd=addDays(gridStart,totalCells);
+
+  const byDate=getScheduledTasksByDate(gridStart,gridEnd);
+  const today=todayYmd();
+
+  const cal=h("div",{class:"cal-container"});
+  const grid=h("div",{class:"cal-month-grid"});
+
+  // Day headers
+  ["Ma","Di","Wo","Do","Vr","Za","Zo"].forEach(d=>grid.appendChild(h("div",{class:"cal-dow-header"},d)));
+
+  // Day cells
+  for(let i=0;i<totalCells;i++){
+    const d=addDays(gridStart,i);
+    const key=ymd(d);
+    const isOutside=d.getMonth()!==fd.getMonth();
+    const isToday=key===today;
+
+    const cell=h("div",{class:`cal-day-cell${isOutside?" outside":""}${isToday?" today":""}`,onclick:()=>{
+      state.overzicht.agendaZoom="day";
+      state.overzicht.focusDate=key;
+      renderOverzicht();
+    }});
+    cell.appendChild(h("div",{class:"cal-day-num"},String(d.getDate())));
+
+    const tasks=(byDate.get(key)||[]).slice(0,3);
+    tasks.forEach(t=>{
+      const ev=h("div",{class:`cal-event ${statusClass(t.status)}`,onclick:e=>{e.stopPropagation();openTaskModal(t.id);}},t.title);
+      cell.appendChild(ev);
+    });
+    const extra=(byDate.get(key)||[]).length-tasks.length;
+    if(extra>0) cell.appendChild(h("div",{class:"cal-more"},`+${extra} meer`));
+
+    grid.appendChild(cell);
+  }
+
+  cal.appendChild(grid);
+  container.appendChild(cal);
+}
+
+function renderWeekAgenda(container){
+  const fd=new Date(state.overzicht.focusDate+"T00:00:00");
+  const ws=startOfWeek(fd);
+  const we=addDays(ws,7);
+  const byDate=getScheduledTasksByDate(ws,we);
+  const today=todayYmd();
+  const dayNames=["Ma","Di","Wo","Do","Vr","Za","Zo"];
+
+  const cal=h("div",{class:"cal-container"});
+  const grid=h("div",{class:"cal-week-grid"});
+
+  // Corner
+  grid.appendChild(h("div",{class:"cal-week-header",style:{borderRight:"1px solid var(--border)"}}));
+  // Day headers
+  for(let i=0;i<7;i++){
+    const d=addDays(ws,i);
+    const isToday=ymd(d)===today;
+    grid.appendChild(h("div",{class:`cal-week-header${isToday?" today":""}`,style:{borderRight:"1px solid var(--border)"}},[
+      h("div",{class:"cal-week-dayname"},dayNames[i]),
+      h("div",{class:"cal-week-daynum"},String(d.getDate()))
+    ]));
+  }
+
+  // Time rows (6am – 22pm)
+  for(let hr=6;hr<=22;hr++){
+    grid.appendChild(h("div",{class:"cal-time-label"},`${String(hr).padStart(2,"0")}:00`));
+    for(let i=0;i<7;i++){
+      const slot=h("div",{class:"cal-week-slot"});
+      const d=addDays(ws,i);
+      const key=ymd(d);
+      const tasks=(byDate.get(key)||[]).filter(t=>{
+        const s=new Date(t.scheduled.start);
+        return s.getHours()===hr;
+      });
+      tasks.forEach(t=>{
+        const ev=h("div",{class:`cal-event ${statusClass(t.status)}`,style:{fontSize:"11px",cursor:"pointer"},onclick:()=>openTaskModal(t.id)},t.title);
+        slot.appendChild(ev);
+      });
+      grid.appendChild(slot);
+    }
+  }
+
+  cal.appendChild(grid);
+  container.appendChild(cal);
+}
+
+function renderDayAgenda(container){
+  const fd=new Date(state.overzicht.focusDate+"T00:00:00");
+  const nextDay=addDays(fd,1);
+  const tasks=getFilteredTasks().filter(t=>{
+    if(!t.scheduled?.start) return false;
+    const s=new Date(t.scheduled.start);
+    const e=t.scheduled.end?new Date(t.scheduled.end):new Date(s.getTime()+36e5);
+    return e>fd&&s<nextDay;
+  }).sort((a,b)=>(a.scheduled.start||"").localeCompare(b.scheduled.start||""));
+
+  const cal=h("div",{class:"cal-container",style:{overflow:"auto",maxHeight:"700px"}});
+  const grid=h("div",{class:"cal-day-grid"});
+
+  // Time slots (0-23)
+  for(let hr=0;hr<24;hr++){
+    grid.appendChild(h("div",{class:"cal-time-label",style:{height:"56px"}},`${String(hr).padStart(2,"0")}:00`));
+    const slot=h("div",{class:"cal-day-slot"});
+
+    // Place events
+    tasks.forEach(t=>{
+      const s=new Date(t.scheduled.start);
+      const e=t.scheduled.end?new Date(t.scheduled.end):new Date(s.getTime()+36e5);
+      if(s.getHours()!==hr||(s<fd)) return;
+
+      const startMin=s.getHours()*60+s.getMinutes();
+      const endMin=e.getHours()*60+e.getMinutes()||(e>nextDay?24*60:0);
+      const topOffset=(s.getMinutes()/60)*56;
+      const height=Math.max(28,((endMin-startMin)/60)*56);
+      const sc=statusClass(t.status);
+      const exec=[getPersonName((t.assignees||[])[0]),getPersonName((t.assignees||[])[1])].filter(x=>x!=="–").join(", ")||"";
+
+      slot.appendChild(h("div",{class:`cal-day-event ${sc}`,style:{top:topOffset+"px",height:height+"px"},onclick:()=>openTaskModal(t.id)},[
+        h("div",{class:"cal-day-event-title"},t.title),
+        h("div",{class:"cal-day-event-meta"},`${fmtDateTime(t.scheduled.start)} – ${fmtDateTime(t.scheduled.end)}${exec?" · "+exec:""}`)
+      ]));
+    });
+
+    grid.appendChild(slot);
+  }
+
+  cal.appendChild(grid);
+  container.appendChild(cal);
+}
+
+// ═══════════════════════════════════════════════════════════
+// MATERIALS
+// ═══════════════════════════════════════════════════════════
+function renderMaterials(){
+  const wrap=$("materials-table-wrap");
+  wrap.innerHTML="";
+  const matFilter=$("mat-filter-status")?.value||"";
+
+  const openTasks=state.tasks.filter(t=>t.status!=="Afgerond");
+  const map=new Map();
+  openTasks.forEach(t=>{
+    (t.materials||[]).forEach(m=>{
+      const item=(typeof m==="string"?m:(m.item||"")).trim();
+      if(!item) return;
+      if(!map.has(item)) map.set(item,{qty:new Set(),statuses:new Set(),tasks:new Set()});
+      if(typeof m!=="string"){
+        map.get(item).qty.add((m.qty||"").trim());
+        map.get(item).statuses.add((m.status||"").trim());
+      }
+      map.get(item).tasks.add(t.title);
+    });
+  });
+
+  let rows=Array.from(map.entries()).sort((a,b)=>a[0].localeCompare(b[0]));
+  if(matFilter){
+    rows=rows.filter(([,info])=>Array.from(info.statuses).some(s=>s.toLowerCase().includes(matFilter.toLowerCase())));
+  }
+
+  if(!rows.length){
+    wrap.innerHTML='<div class="empty-state"><p>Geen materialen gevonden.</p></div>';
+    return;
+  }
+
+  const table=h("table",{class:"data-table"});
+  table.appendChild(h("thead",{},[h("tr",{},[
+    h("th",{},"Materiaal"),h("th",{},"Hoeveelheid"),h("th",{},"Status"),h("th",{},"Klussen")
+  ])]));
+  const tbody=h("tbody");
+  rows.forEach(([item,info])=>{
+    const qty=Array.from(info.qty).filter(Boolean).join(", ")||"–";
+    const sts=Array.from(info.statuses).filter(Boolean).join(", ")||"–";
+    const tasks=Array.from(info.tasks).join(", ");
+    tbody.appendChild(h("tr",{style:{cursor:"default"}},[
+      h("td",{style:{fontWeight:"600"}},item),
+      h("td",{},qty),
+      h("td",{},sts),
+      h("td",{class:"cell-small"},tasks)
+    ]));
+  });
+  table.appendChild(tbody);
+  wrap.appendChild(table);
+}
+
+// ═══════════════════════════════════════════════════════════
+// PEOPLE
+// ═══════════════════════════════════════════════════════════
+function renderPeople(){
+  const wrap=$("people-table-wrap");
+  wrap.innerHTML="";
+
+  const table=h("table",{class:"data-table"});
+  table.appendChild(h("thead",{},[h("tr",{},[h("th",{},"ID"),h("th",{},"Naam"),h("th",{},"Klussen"),h("th",{},"")])]));
+  const tbody=h("tbody");
+  state.people.slice().sort((a,b)=>a.name.localeCompare(b.name)).forEach(p=>{
+    const taskCount=state.tasks.filter(t=>(t.assignees||[]).includes(p.id)).length;
+    const nameInput=h("input",{type:"text",value:p.name,style:{border:"1px solid var(--border)",borderRadius:"var(--radius)",padding:"6px 10px",width:"100%"}});
+    nameInput.onchange=()=>{
+      p.name=nameInput.value.trim()||p.name;
+      save();
+    };
+    const delBtn=h("button",{class:"btn danger small",onclick:()=>{
+      if(!confirm(`Verwijder ${p.name}?`)) return;
+      state.people=state.people.filter(x=>x.id!==p.id);
+      state.tasks.forEach(t=>{
+        if(t.owner===p.id) t.owner="";
+        t.assignees=(t.assignees||[]).filter(id=>id!==p.id);
+      });
+      save();
+      renderPeople();
+    }},"Verwijder");
+    tbody.appendChild(h("tr",{style:{cursor:"default"}},[
+      h("td",{class:"cell-muted"},p.id),
+      h("td",{},nameInput),
+      h("td",{class:"cell-small"},`${taskCount} klussen`),
+      h("td",{},delBtn)
+    ]));
+  });
+  table.appendChild(tbody);
+  wrap.appendChild(table);
+}
+
+// ═══════════════════════════════════════════════════════════
+// SETTINGS
+// ═══════════════════════════════════════════════════════════
+function renderSettings(){
+  renderGroupsManager();
+}
+
+function renderGroupsManager(){
+  const container=$("groups-manager");
+  if(!container) return;
+  container.innerHTML="";
+  state.groups.forEach(g=>{
+    const chip=h("span",{class:"group-chip",style:{borderColor:g.color+"55",background:g.color+"15",color:g.color}},[
+      g.name,
+      h("span",{class:"remove-group",onclick:()=>{
+        if(!confirm(`Groep "${g.name}" verwijderen?`)) return;
+        state.groups=state.groups.filter(x=>x.id!==g.id);
+        save();
+        renderGroupsManager();
+      }},"×")
+    ]);
+    container.appendChild(chip);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// TASK MODAL
+// ═══════════════════════════════════════════════════════════
+function openTaskModal(taskId){
+  const t=state.tasks.find(x=>x.id===taskId);
   if(!t) return;
-  // harden / migrate schedule
   ensureSchedule(t);
-  if(!Array.isArray(t.assignees)) t.assignees = [];
-  state.selectedTaskId = taskId;
+  state.selectedTaskId=taskId;
 
-  const drawer = document.getElementById("drawer");
-  drawer.classList.remove("hidden");
+  $("modal-title").textContent=t.title||"Klus bewerken";
+  $("task-modal").classList.remove("hidden");
 
-  document.getElementById("drawer-title").textContent = t.title;
+  // Populate status
+  const stSel=$("f-status");
+  stSel.innerHTML="";
+  STATUSES.forEach(s=>stSel.appendChild(h("option",{value:s},s)));
+  stSel.value=t.status||"Backlog";
 
-  // status select
-  const stSel = document.getElementById("f-status");
-  stSel.innerHTML = "";
-  STATUSES.forEach(s => stSel.appendChild(el("option", {value:s}, s)));
+  // Populate group
+  const grSel=$("f-group");
+  grSel.innerHTML='<option value="">— Kies groep —</option>';
+  state.groups.forEach(g=>grSel.appendChild(h("option",{value:g.name},g.name)));
+  // Also add custom if not in list
+  if(t.group&&!state.groups.find(g=>g.name===t.group)){
+    grSel.appendChild(h("option",{value:t.group},t.group));
+  }
+  grSel.value=t.group||"";
 
-  // executor selects
-  const exec1Sel = document.getElementById("f-exec1");
-  const exec2Sel = document.getElementById("f-exec2");
-  exec1Sel.innerHTML = "";
-  exec2Sel.innerHTML = "";
-  exec1Sel.appendChild(el("option", {value:""}, "—"));
-  exec2Sel.appendChild(el("option", {value:""}, "—"));
-  state.people.slice().sort((a,b)=>a.name.localeCompare(b.name)).forEach(p=>{
-    exec1Sel.appendChild(el("option", {value:p.id}, p.name));
-    exec2Sel.appendChild(el("option", {value:p.id}, p.name));
+  // Populate executors
+  const exec1=$("f-exec1"), exec2=$("f-exec2");
+  [exec1,exec2].forEach(sel=>{
+    sel.innerHTML='<option value="">—</option>';
+    state.people.slice().sort((a,b)=>a.name.localeCompare(b.name)).forEach(p=>sel.appendChild(h("option",{value:p.id},p.name)));
   });
+  exec1.value=(t.assignees||[])[0]||"";
+  exec2.value=(t.assignees||[])[1]||"";
 
-  // basic
-  document.getElementById("f-title").value = t.title || "";
-  document.getElementById("f-project").value = t.project || "";
-  document.getElementById("f-group").value = t.group || "";
-  document.getElementById("f-location").value = t.location || "";
-  document.getElementById("f-status").value = t.status || "Backlog";
+  // Populate datalists for suggestions
+  populateDatalist("project-suggestions", [...new Set(state.tasks.map(t=>t.project).filter(Boolean))]);
+  populateDatalist("location-suggestions", [...new Set(state.tasks.map(t=>t.location).filter(Boolean))]);
+  populateDatalist("category-suggestions", [...new Set(state.tasks.map(t=>t.category).filter(Boolean))]);
 
-  // executors
-  document.getElementById("f-exec1").value = (t.assignees||[])[0] || "";
-  document.getElementById("f-exec2").value = (t.assignees||[])[1] || "";
-
-  // schedule
-  document.getElementById("f-start").value = t.scheduled?.start || "";
-  document.getElementById("f-end").value = t.scheduled?.end || "";
-
-  // hours
-  document.getElementById("f-o").value = t.estimate_hours?.optimistic ?? 0;
-  document.getElementById("f-r").value = t.estimate_hours?.realistic ?? 0;
-  document.getElementById("f-w").value = t.estimate_hours?.worst ?? 0;
-  document.getElementById("f-actual").value = t.actual_hours ?? 0;
-
-  document.getElementById("f-dod").value = t.definition_of_done || "";
-
-  // materials/tools/steps
-  document.getElementById("f-materials").value = (t.materials||[]).map(m=>{
-    const qty = m.qty || "";
-    const st = m.status || "";
-    return `${m.item||""}${qty? " | "+qty:""}${st? " | "+st:""}`.trim();
-  }).join("\n");
-  document.getElementById("f-tools").value = (t.tools||[]).join("\n");
-  document.getElementById("f-steps").value = (t.steps||[]).join("\n");
-  document.getElementById("f-notes").value = t.notes || "";
+  // Fill fields
+  $("f-title").value=t.title||"";
+  $("f-project").value=t.project||"";
+  $("f-location").value=t.location||"";
+  $("f-category").value=t.category||"";
+  $("f-start").value=t.scheduled?.start||"";
+  $("f-end").value=t.scheduled?.end||"";
+  $("f-hours-o").value=t.estimate_hours?.optimistic??0;
+  $("f-hours-r").value=t.estimate_hours?.realistic??0;
+  $("f-hours-w").value=t.estimate_hours?.worst??0;
+  $("f-hours-actual").value=t.actual_hours??0;
+  $("f-dod").value=t.definition_of_done||"";
+  $("f-materials").value=materialsToText(t.materials);
+  $("f-tools").value=(t.tools||[]).join("\n");
+  $("f-steps").value=(t.steps||[]).join("\n");
+  $("f-notes").value=t.notes||"";
 }
 
+function populateDatalist(id, items){
+  const dl=$(id);
+  if(!dl) return;
+  dl.innerHTML="";
+  items.forEach(i=>dl.appendChild(h("option",{value:i})));
+}
 
-function renderAssigneeMulti(task){
-  const wrap =   wrap.innerHTML = "";
-  const selected = new Set(task.assignees || []);
-  state.people.slice().sort((a,b)=>a.name.localeCompare(b.name)).forEach(p=>{
-    const id = `ass-${p.id}`;
-    const chk = el("input", {type:"checkbox", id, "data-pid":p.id});
-    chk.checked = selected.has(p.id);
-    const pill = el("label", {class:"pill", for:id}, [chk, p.name]);
-    wrap.appendChild(pill);
-  });
+function closeTaskModal(){
+  $("task-modal").classList.add("hidden");
+  state.selectedTaskId=null;
 }
 
 function readTaskForm(){
-  const id = state.selectedTaskId;
-  const t = state.tasks.find(x=>x.id===id);
+  const id=state.selectedTaskId;
+  const t=state.tasks.find(x=>x.id===id);
   if(!t) return null;
-  // ensure nested structures exist
   ensureSchedule(t);
-  if(!Array.isArray(t.assignees)) t.assignees = [];
 
-  t.title = document.getElementById("f-title").value.trim() || t.title;
-  t.project = document.getElementById("f-project").value.trim();
-  t.group = document.getElementById("f-group").value.trim();
-  t.location = document.getElementById("f-location").value.trim();
-  t.status = document.getElementById("f-status").value;
-
-  const exec1 = document.getElementById("f-exec1").value;
-  const exec2 = document.getElementById("f-exec2").value;
-  t.assignees = [exec1, exec2].filter(Boolean);
-
-  if(!t.scheduled) t.scheduled = { date:"", timeblock:"", start:"", end:"" };
-  t.scheduled.start = document.getElementById("f-start").value;
-  t.scheduled.end = document.getElementById("f-end").value;
-
-  // keep legacy date in sync when start is set
+  t.title=$("f-title").value.trim()||t.title;
+  t.project=$("f-project").value.trim();
+  t.group=$("f-group").value;
+  t.location=$("f-location").value.trim();
+  t.category=$("f-category").value.trim();
+  t.status=$("f-status").value;
+  t.assignees=[$("f-exec1").value,$("f-exec2").value].filter(Boolean);
+  t.scheduled.start=$("f-start").value;
+  t.scheduled.end=$("f-end").value;
   if(t.scheduled.start){
-    try{
-      const s = new Date(t.scheduled.start);
-      const pad=(n)=>String(n).padStart(2,"0");
-      t.scheduled.date = `${s.getFullYear()}-${pad(s.getMonth()+1)}-${pad(s.getDate())}`;
-    }catch(e){}
+    try { t.scheduled.date=t.scheduled.start.split("T")[0]; } catch(e){}
   }
-
-  // hours
-  t.estimate_hours = {
-    optimistic: Number(document.getElementById("f-o").value||0),
-    realistic: Number(document.getElementById("f-r").value||0),
-    worst: Number(document.getElementById("f-w").value||0)
+  t.estimate_hours={
+    optimistic:Number($("f-hours-o").value||0),
+    realistic:Number($("f-hours-r").value||0),
+    worst:Number($("f-hours-w").value||0)
   };
-  t.actual_hours = Number(document.getElementById("f-actual").value||0);
-
-  t.definition_of_done = document.getElementById("f-dod").value;
-
-  t.materials = parseMaterialsText(document.getElementById("f-materials").value);
-  t.tools = parseLines(document.getElementById("f-tools").value);
-  t.steps = parseLines(document.getElementById("f-steps").value);
-  t.notes = document.getElementById("f-notes").value;
-
+  t.actual_hours=Number($("f-hours-actual").value||0);
+  t.definition_of_done=$("f-dod").value;
+  t.materials=parseMaterialsText($("f-materials").value);
+  t.tools=parseLines($("f-tools").value);
+  t.steps=parseLines($("f-steps").value);
+  t.notes=$("f-notes").value;
   return t;
 }
 
+function saveTask(){
+  const t=readTaskForm();
+  if(!t) { toast("Geen klus geselecteerd","warn"); return; }
 
-function buildPrintSheet(task){
-  const exec1 = getPersonName((task.assignees||[])[0]);
-  const exec2 = getPersonName((task.assignees||[])[1]);
-  const start = task.scheduled?.start ? fmtDateTime(task.scheduled.start) : "–";
-  const end = task.scheduled?.end ? fmtDateTime(task.scheduled.end) : "–";
-
-  const mats = (task.materials||[]).map(m=>{
-    const qty = m.qty ? ` — ${escapeHtml(m.qty)}` : "";
-    const st = m.status ? ` (${escapeHtml(m.status)})` : "";
-    return `<li>${escapeHtml(m.item||"")}${qty}${st}</li>`;
-  }).join("") || "<li>–</li>";
-
-  const tools = (task.tools||[]).map(x=>`<li>${escapeHtml(x)}</li>`).join("") || "<li>–</li>";
-  const steps = (task.steps||[]).map(x=>`<li>${escapeHtml(x)}</li>`).join("") || "<li>–</li>";
-  const dod = task.definition_of_done ? escapeHtml(task.definition_of_done) : "–";
-  const notes = task.notes ? escapeHtml(task.notes) : "–";
-
-  return `
-    <div class="ps-header">
-      <div>
-        <div class="ps-title">${escapeHtml(task.title||"")}</div>
-        <div class="ps-sub">${escapeHtml(task.group||"–")} • ${escapeHtml(task.location||"–")}</div>
-      </div>
-      <div class="ps-meta">
-        <div><strong>Status:</strong> ${escapeHtml(task.status||"–")}</div>
-        <div><strong>Start:</strong> ${escapeHtml(start)}</div>
-        <div><strong>Eind:</strong> ${escapeHtml(end)}</div>
-      </div>
-    </div>
-
-    <div class="ps-grid">
-      <div class="ps-box">
-        <h4>Uitvoerders</h4>
-        <p><strong>Uitvoerder 1:</strong> ${escapeHtml(exec1)}<br/>
-        <strong>Uitvoerder 2:</strong> ${escapeHtml(exec2)}</p>
-      </div>
-      <div class="ps-box">
-        <h4>Definition of Done</h4>
-        <p>${dod}</p>
-      </div>
-
-      <div class="ps-box">
-        <h4>Materialen</h4>
-        <ul>${mats}</ul>
-      </div>
-      <div class="ps-box">
-        <h4>Tools</h4>
-        <ul>${tools}</ul>
-      </div>
-
-      <div class="ps-box ps-full">
-        <h4>Stappenplan</h4>
-        <ul>${steps}</ul>
-      </div>
-      <div class="ps-box ps-full">
-        <h4>Notities</h4>
-        <p>${notes}</p>
-      </div>
-    </div>
-  `;
-}
-
-
-function escapeHtml(s){
-  return String(s ?? "")
-    .replace(/&/g,"&amp;")
-    .replace(/</g,"&lt;")
-    .replace(/>/g,"&gt;")
-    .replace(/"/g,"&quot;")
-    .replace(/'/g,"&#039;");
-}
-
-
-function renderMaterials(){
-  const tbody = document.querySelector("#table-materials tbody");
-  tbody.innerHTML = "";
-
-  const openTasks = state.tasks.filter(t=>t.status!=="Afgerond");
-  const map = new Map(); // item -> {qty:Set/arr, statuses:Set, tasks:Set}
-  openTasks.forEach(t=>{
-    (t.materials||[]).forEach(m=>{
-      if(typeof m === "string"){
-        const item = m;
-        if(!map.has(item)) map.set(item, {qty:new Set(), statuses:new Set(), tasks:new Set()});
-        map.get(item).qty.add("");
-        map.get(item).statuses.add("");
-        map.get(item).tasks.add(t.id);
-      }else{
-        const item = (m.item||"").trim();
-        if(!item) return;
-        if(!map.has(item)) map.set(item, {qty:new Set(), statuses:new Set(), tasks:new Set()});
-        map.get(item).qty.add((m.qty||"").trim());
-        map.get(item).statuses.add((m.status||"").trim());
-        map.get(item).tasks.add(t.id);
-      }
-    });
-  });
-
-  const rows = Array.from(map.entries()).sort((a,b)=>a[0].localeCompare(b[0]));
-  if(rows.length === 0){
-    tbody.appendChild(el("tr", {}, [
-      el("td", {colspan:"4", class:"muted"}, "Geen materialen gevonden in openstaande klussen.")
-    ]));
-    return;
+  // Normalize end > start
+  if(t.scheduled.start&&t.scheduled.end){
+    if(new Date(t.scheduled.end)<=new Date(t.scheduled.start)){
+      const s=new Date(t.scheduled.start);
+      s.setHours(s.getHours()+1);
+      const p=n=>String(n).padStart(2,"0");
+      t.scheduled.end=`${s.getFullYear()}-${p(s.getMonth()+1)}-${p(s.getDate())}T${p(s.getHours())}:${p(s.getMinutes())}`;
+    }
   }
 
-  rows.forEach(([item, info])=>{
-    const qty = Array.from(info.qty).filter(Boolean).join(", ") || "–";
-    const sts = Array.from(info.statuses).filter(Boolean).join(", ") || "–";
-    const tasks = Array.from(info.tasks).sort().map(id=>`<span class="tag">${id}</span>`).join(" ");
-
-    tbody.appendChild(el("tr", {}, [
-      el("td", {}, item),
-      el("td", {}, qty),
-      el("td", {}, sts),
-      el("td", {html: tasks || "–"})
-    ]));
-  });
+  save();
+  closeTaskModal();
+  if(state.currentView==="dashboard") renderDashboard();
+  else if(state.currentView==="overzicht") renderOverzicht();
 }
 
-function renderPeople(){
-  const tbody = document.querySelector("#table-people tbody");
-  tbody.innerHTML = "";
-
-  state.people
-    .slice()
-    .sort((a,b)=>a.name.localeCompare(b.name))
-    .forEach(p=>{
-      const nameInput = el("input", {type:"text", value:p.name});
-      nameInput.onchange = ()=>{
-        p.name = nameInput.value.trim() || p.name;
-        saveToStorage();
-        renderPeople();
-        // refresh tasks view chips/names
-        renderDashboard();
-      };
-
-      const delBtn = el("button", {class:"btn danger"}, "Verwijder");
-      delBtn.onclick = ()=>{
-        if(!confirm(`Verwijder ${p.name}? (IDs in klussen blijven bestaan als tekst)`)) return;
-        state.people = state.people.filter(x=>x.id!==p.id);
-        // also remove from assignments/owner
-        state.tasks.forEach(t=>{
-          if(t.owner === p.id) t.owner = "";
-          t.assignees = (t.assignees||[]).filter(id=>id!==p.id);
-        });
-        saveToStorage();
-        renderPeople();
-        renderDashboard();
-      };
-
-      tbody.appendChild(el("tr", {}, [
-        el("td", {}, p.id),
-        el("td", {}, nameInput),
-        el("td", {}, delBtn)
-      ]));
-    });
+function deleteTask(){
+  if(!state.selectedTaskId) return;
+  const t=state.tasks.find(x=>x.id===state.selectedTaskId);
+  if(!t) return;
+  if(!confirm(`Verwijder "${t.title}"? Dit kan niet ongedaan worden.`)) return;
+  state.tasks=state.tasks.filter(x=>x.id!==state.selectedTaskId);
+  save();
+  closeTaskModal();
+  if(state.currentView==="dashboard") renderDashboard();
+  else if(state.currentView==="overzicht") renderOverzicht();
 }
 
-function addPerson(){
-  const name = prompt("Naam van persoon:");
-  if(!name) return;
-  let id = slugify(name);
-  if(!id) return;
-  const exists = new Set(state.people.map(p=>p.id));
-  if(exists.has(id)){
-    let n = 2;
-    while(exists.has(`${id}-${n}`)) n++;
-    id = `${id}-${n}`;
-  }
-  state.people.push({id, name: name.trim()});
-  saveToStorage();
-  renderPeople();
-  renderTasks();
-}
+function addNewTask(){
+  const existing=new Set(state.tasks.map(t=>t.id));
+  let n=1;
+  while(existing.has(`TASK-${String(n).padStart(3,"0")}`)) n++;
+  const id=`TASK-${String(n).padStart(3,"0")}`;
 
-function addTask(){
-  const t = newTaskTemplate();
+  const t={
+    id,
+    project:"",
+    group:state.groups[0]?.name||"",
+    location:"",
+    type:"",
+    category:"",
+    title:"Nieuwe klus",
+    priority:"",
+    status:"Backlog",
+    owner:"",
+    assignees:[],
+    estimate_hours:{optimistic:0,realistic:0,worst:0},
+    actual_hours:0,
+    scheduled:{date:"",timeblock:"",start:"",end:""},
+    dependencies:[],
+    definition_of_done:"",
+    materials:[],
+    tools:[],
+    steps:[],
+    notes:""
+  };
   state.tasks.push(t);
-  saveToStorage();
-  switchView("tasks");
-  openTaskAndScroll(t.id);
-  renderTasks();
-  renderDashboard();
+  saveLocal();
+  openTaskModal(id);
 }
 
+// ─── Print callsheet ──────────────────────────────────────
+function printTask(){
+  const t=readTaskForm();
+  if(!t) return;
+  const exec1=getPersonName((t.assignees||[])[0]);
+  const exec2=getPersonName((t.assignees||[])[1]);
+  const mats=(t.materials||[]).map(m=>`<li>${escHtml(m.item||"")}${m.qty?" — "+escHtml(m.qty):""}${m.status?" ("+escHtml(m.status)+")":""}</li>`).join("")||"<li>–</li>";
+  const tools=(t.tools||[]).map(x=>`<li>${escHtml(x)}</li>`).join("")||"<li>–</li>";
+  const steps=(t.steps||[]).map((x,i)=>`<li>${escHtml(x)}</li>`).join("")||"<li>–</li>";
+
+  $("print-sheet").innerHTML=`
+    <div class="ps-header">
+      <div class="ps-title">${escHtml(t.title)}</div>
+      <div class="ps-meta">${escHtml(t.group||"–")} · ${escHtml(t.location||"–")} · Status: ${escHtml(t.status)} · Start: ${escHtml(fmtDateTime(t.scheduled?.start))} · Eind: ${escHtml(fmtDateTime(t.scheduled?.end))}</div>
+    </div>
+    <div class="ps-grid">
+      <div class="ps-box"><h4>Uitvoerders</h4><p>${escHtml(exec1)}${exec2!=="–"?", "+escHtml(exec2):""}</p></div>
+      <div class="ps-box"><h4>Definition of Done</h4><p>${escHtml(t.definition_of_done||"–")}</p></div>
+      <div class="ps-box"><h4>Materialen</h4><ul>${mats}</ul></div>
+      <div class="ps-box"><h4>Tools</h4><ul>${tools}</ul></div>
+      <div class="ps-box ps-full"><h4>Stappenplan</h4><ol>${steps}</ol></div>
+      <div class="ps-box ps-full"><h4>Notities</h4><p>${escHtml(t.notes||"–")}</p></div>
+    </div>`;
+  requestAnimationFrame(()=>window.print());
+}
+
+// ═══════════════════════════════════════════════════════════
+// iCAL EXPORT
+// ═══════════════════════════════════════════════════════════
+function generateICal(){
+  const scheduled=state.tasks.filter(t=>t.scheduled?.start);
+  if(!scheduled.length){ toast("Geen ingeplande klussen","warn"); return; }
+
+  const fmtIcal=(iso)=>{
+    const d=new Date(iso);
+    const p=n=>String(n).padStart(2,"0");
+    return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}T${p(d.getHours())}${p(d.getMinutes())}00`;
+  };
+
+  let cal="BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Klusplanner Pro//NL\r\nCALSCALE:GREGORIAN\r\n";
+  scheduled.forEach(t=>{
+    const start=fmtIcal(t.scheduled.start);
+    const end=t.scheduled.end?fmtIcal(t.scheduled.end):fmtIcal(new Date(new Date(t.scheduled.start).getTime()+36e5).toISOString());
+    const desc=[
+      t.group?`Groep: ${t.group}`:"",
+      t.definition_of_done?`DoD: ${t.definition_of_done}`:"",
+      (t.steps||[]).length?`Stappen: ${t.steps.join(", ")}`:"",
+      getPersonName((t.assignees||[])[0])!=="–"?`Uitvoerder: ${getPersonName((t.assignees||[])[0])}`:"",
+      t.notes||""
+    ].filter(Boolean).join("\\n");
+
+    cal+=`BEGIN:VEVENT\r\nDTSTART:${start}\r\nDTEND:${end}\r\nSUMMARY:${(t.title||"").replace(/[,;\\]/g," ")}\r\nLOCATION:${(t.location||"").replace(/[,;\\]/g," ")}\r\nDESCRIPTION:${desc.replace(/[\\]/g,"\\\\").replace(/\n/g,"\\n")}\r\nSTATUS:${t.status==="Afgerond"?"COMPLETED":"CONFIRMED"}\r\nEND:VEVENT\r\n`;
+  });
+  cal+="END:VCALENDAR\r\n";
+
+  const blob=new Blob([cal],{type:"text/calendar"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="klusplanner.ics";
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast(`${scheduled.length} klussen geëxporteerd als .ics`);
+}
+
+// ═══════════════════════════════════════════════════════════
+// EXPORT / IMPORT
+// ═══════════════════════════════════════════════════════════
+function exportJSON(){
+  const payload={exported_at:new Date().toISOString(),tasks:state.tasks,people:state.people,groups:state.groups};
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="klusplanner-export.json";
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast("Data geëxporteerd");
+}
+
+async function importJSON(){
+  const file=$("file-import")?.files[0];
+  if(!file){ toast("Kies eerst een bestand","warn"); return; }
+  try {
+    const text=await file.text();
+    const obj=JSON.parse(text);
+    if(!obj.tasks||!obj.people) throw new Error("Verwacht {tasks, people}");
+    state.tasks=obj.tasks;
+    state.people=obj.people;
+    if(obj.groups) state.groups=obj.groups;
+    state.tasks.forEach(t=>ensureSchedule(t));
+    await save();
+    toast("Import klaar ✓");
+    switchView(state.currentView);
+  } catch(e){
+    toast("Import mislukt: "+e.message,"err");
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// WIRE UI
+// ═══════════════════════════════════════════════════════════
 function wireUI(){
-  // tabs
-  document.querySelectorAll(".tab").forEach(btn=>{
-    btn.addEventListener("click", ()=>switchView(btn.dataset.view));
+  // Navigation
+  $$(".nav-item[data-view]").forEach(btn=>{
+    btn.addEventListener("click",()=>switchView(btn.dataset.view));
   });
 
-  document.getElementById("btn-add-task").onclick = addTask;
-  document.getElementById("btn-add-task-2").onclick = addTask;
-
-  document.getElementById("btn-clear-filters").onclick = ()=>{
-    document.getElementById("filter-search").value = "";
-    document.getElementById("filter-status").value = "";
-    document.getElementById("filter-group").value = "";
-    document.getElementById("filter-person").value = "";
-    renderTasks();
-  };
-
-  // filters: live update
-  document.getElementById("filter-search").addEventListener("input", ()=>renderTasks());
-  ["filter-status","filter-group","filter-person"].forEach(id=>{
-    const elx = document.getElementById(id);
-    if(elx) elx.addEventListener("change", ()=>renderTasks());
+  // Sidebar collapse
+  $("btn-collapse-sidebar")?.addEventListener("click",()=>{
+    $("sidebar").classList.toggle("collapsed");
+  });
+  $("btn-open-sidebar")?.addEventListener("click",()=>{
+    $("sidebar").classList.toggle("open");
   });
 
+  // Quick add
+  $("btn-quick-add")?.addEventListener("click",addNewTask);
 
-  document.getElementById("btn-close").onclick = ()=>{
-    document.getElementById("drawer").classList.add("hidden");
-    state.selectedTaskId = null;
-  };
+  // Sync
+  $("btn-sync")?.addEventListener("click",async ()=>{
+    if(githubConfig){
+      await syncFromGitHub();
+      switchView(state.currentView);
+      toast("Data opgehaald ✓");
+    } else {
+      toast("Niet verbonden met GitHub","warn");
+    }
+  });
 
-  document.getElementById("btn-save").onclick = (e)=>{
-    if(e){ e.preventDefault(); e.stopPropagation(); }
-    const btn = document.getElementById("btn-save");
-    try{
-      const t = readTaskForm();
-      if(!t){
-        btn.classList.add("shake");
-        setTimeout(()=>btn.classList.remove("shake"), 400);
-        showToast("Geen klus geselecteerd.", "warn");
-        return;
-      }
+  // Overzicht mode toggle
+  $$(".mode-btn[data-mode]").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      state.overzicht.mode=btn.dataset.mode;
+      renderOverzicht();
+    });
+  });
 
-      // normalize start/end if both set
-      if(t.scheduled?.start && t.scheduled?.end){
-        const s = new Date(t.scheduled.start);
-        const en = new Date(t.scheduled.end);
-        if(en <= s){
-          s.setHours(s.getHours()+1);
-          const pad=(n)=>String(n).padStart(2,"0");
-          t.scheduled.end = `${s.getFullYear()}-${pad(s.getMonth()+1)}-${pad(s.getDate())}T${pad(s.getHours())}:${pad(s.getMinutes())}`;
+  // Agenda zoom
+  $$(".mode-btn[data-zoom]").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      state.overzicht.agendaZoom=btn.dataset.zoom;
+      renderOverzicht();
+    });
+  });
+
+  // Gantt zoom
+  $$(".mode-btn[data-gzoom]").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      state.overzicht.ganttZoom=btn.dataset.gzoom;
+      renderOverzicht();
+    });
+  });
+
+  // Calendar nav
+  $("cal-prev")?.addEventListener("click",()=>navAgenda(-1));
+  $("cal-next")?.addEventListener("click",()=>navAgenda(1));
+  $("cal-today")?.addEventListener("click",()=>{ state.overzicht.focusDate=todayYmd(); renderOverzicht(); });
+
+  // Gantt nav
+  $("gantt-prev")?.addEventListener("click",()=>navGantt(-1));
+  $("gantt-next")?.addEventListener("click",()=>navGantt(1));
+  $("gantt-today")?.addEventListener("click",()=>{ state.overzicht.focusDate=todayYmd(); renderOverzicht(); });
+
+  // Filters
+  $("filter-search")?.addEventListener("input",()=>renderOverzicht());
+  ["filter-status","filter-group","filter-person","filter-project"].forEach(id=>{
+    $(id)?.addEventListener("change",()=>renderOverzicht());
+  });
+  $("btn-clear-filters")?.addEventListener("click",()=>{
+    $("filter-search").value="";
+    $("filter-status").value="";
+    $("filter-group").value="";
+    $("filter-person").value="";
+    $("filter-project").value="";
+    renderOverzicht();
+  });
+  $("mat-filter-status")?.addEventListener("change",renderMaterials);
+
+  // Task modal
+  $("btn-save-task")?.addEventListener("click",saveTask);
+  $("btn-close-modal")?.addEventListener("click",closeTaskModal);
+  $("btn-delete-task")?.addEventListener("click",deleteTask);
+  $("btn-print-task")?.addEventListener("click",printTask);
+  $("task-modal")?.addEventListener("click",(e)=>{
+    if(e.target.id==="task-modal") closeTaskModal();
+  });
+
+  // People
+  $("btn-add-person")?.addEventListener("click",()=>{
+    const name=prompt("Naam van persoon:");
+    if(!name) return;
+    let id=slugify(name);
+    if(!id) return;
+    const existing=new Set(state.people.map(p=>p.id));
+    if(existing.has(id)){ let n=2; while(existing.has(`${id}-${n}`)) n++; id=`${id}-${n}`; }
+    state.people.push({id,name:name.trim()});
+    save();
+    renderPeople();
+  });
+
+  // Settings
+  $("btn-export")?.addEventListener("click",exportJSON);
+  $("btn-import")?.addEventListener("click",importJSON);
+  $("btn-ical")?.addEventListener("click",generateICal);
+  $("btn-add-group")?.addEventListener("click",()=>{
+    const name=$("new-group-name")?.value.trim();
+    if(!name) return;
+    const id=slugify(name);
+    if(state.groups.find(g=>g.id===id)){ toast("Groep bestaat al","warn"); return; }
+    const color=GROUP_COLORS[state.groups.length%GROUP_COLORS.length];
+    state.groups.push({id,name,color});
+    $("new-group-name").value="";
+    save();
+    renderGroupsManager();
+  });
+  $("btn-reset")?.addEventListener("click",async ()=>{
+    if(!confirm("Reset naar defaults? Dit overschrijft je huidige data.")) return;
+    try {
+      const [tasksRes,peopleRes]=await Promise.all([fetch("data/tasks.json"),fetch("data/people.json")]);
+      state.tasks=await tasksRes.json();
+      state.people=await peopleRes.json();
+      state.groups=[...DEFAULT_GROUPS];
+      state.tasks.forEach(t=>ensureSchedule(t));
+      await save();
+      toast("Teruggezet ✓");
+      switchView("dashboard");
+    } catch(e){
+      toast("Reset mislukt: "+e.message,"err");
+    }
+  });
+
+  // Logout
+  $("btn-logout")?.addEventListener("click",()=>{
+    githubConfig=null;
+    saveConfig();
+    isOnline=false;
+    updateSyncIndicator("offline");
+    $("app-shell").classList.add("hidden");
+    $("login-screen").classList.remove("hidden");
+  });
+}
+
+function navAgenda(dir){
+  const d=new Date(state.overzicht.focusDate+"T00:00:00");
+  const z=state.overzicht.agendaZoom;
+  if(z==="day") d.setDate(d.getDate()+dir);
+  else if(z==="week") d.setDate(d.getDate()+dir*7);
+  else d.setMonth(d.getMonth()+dir);
+  state.overzicht.focusDate=ymd(d);
+  renderOverzicht();
+}
+
+function navGantt(dir){
+  const d=new Date(state.overzicht.focusDate+"T00:00:00");
+  if(state.overzicht.ganttZoom==="week") d.setDate(d.getDate()+dir*7);
+  else d.setMonth(d.getMonth()+dir);
+  state.overzicht.focusDate=ymd(d);
+  renderOverzicht();
+}
+
+// ═══════════════════════════════════════════════════════════
+// LOGIN
+// ═══════════════════════════════════════════════════════════
+function wireLogin(){
+  $("btn-login")?.addEventListener("click",async ()=>{
+    const token=$("login-token").value.trim();
+    const owner=$("login-owner").value.trim();
+    const repo=$("login-repo").value.trim();
+    const remember=$("login-remember").checked;
+
+    if(!token||!owner||!repo){
+      showLoginError("Vul alle velden in.");
+      return;
+    }
+
+    $("btn-login").textContent="Verbinden...";
+    $("btn-login").disabled=true;
+
+    githubConfig={token,owner,repo};
+    try {
+      const valid=await ghValidate();
+      if(!valid) throw new Error("Kan repo niet bereiken. Check token/repo.");
+
+      if(remember) saveConfig();
+      const synced=await syncFromGitHub();
+      if(!synced){
+        // Fallback to local
+        const local=loadLocal();
+        if(local){
+          state.tasks=local.tasks||[];
+          state.people=local.people||[];
+          state.groups=local.groups||DEFAULT_GROUPS;
         }
       }
-
-      // update drawer title
-      const dt = document.getElementById("drawer-title");
-      if(dt) dt.textContent = t.title;
-
-      const stored = saveToStorage();
-
-      // re-render views safely (never block saving)
-      try{ renderTasks(); }catch(err){ console.error("renderTasks failed", err); }
-      try{ renderDashboard(); }catch(err){ console.error("renderDashboard failed", err); }
-
-      showToast(stored ? "Opgeslagen ✅" : "Opgeslagen (maar niet bewaard in browser) ⚠️", stored ? "ok" : "warn");
-
-      const old = btn.textContent;
-      btn.textContent = "Opgeslagen ✅";
-      btn.disabled = true;
-      setTimeout(()=>{ btn.textContent = old; btn.disabled = false; }, 700);
-    }catch(err){
-      console.error(err);
-      showToast("Opslaan mislukt. Check console.", "err");
-    }
-  };
-
-  document.getElementById("btn-print").onclick = (e)=>{
-    if(e){ e.preventDefault(); e.stopPropagation(); }
-    const t = readTaskForm(); // include latest edits
-    if(!t) return;
-    saveToStorage();
-    const sheet = document.getElementById("print-sheet");
-    sheet.innerHTML = buildPrintSheet(t);
-    // ensure DOM update before print (some browsers need a frame)
-    requestAnimationFrame(()=>window.print());
-  };
-
-  document.getElementById("btn-refresh-materials").onclick = renderMaterials;
-
-  document.getElementById("btn-add-person").onclick = addPerson;
-
-  // export/import/reset
-  document.getElementById("btn-export").onclick = ()=>{
-    const payload = { exported_at: new Date().toISOString(), tasks: state.tasks, people: state.people };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], {type:"application/json"});
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "klusplanner-export.json";
-    a.click();
-    URL.revokeObjectURL(a.href);
-  };
-
-  document.getElementById("btn-import").onclick = async ()=>{
-    const file = document.getElementById("file-import").files[0];
-    if(!file){ alert("Kies eerst een JSON-bestand."); return; }
-    try{
-      const text = await file.text();
-      const obj = JSON.parse(text);
-      if(!obj.tasks || !obj.people) throw new Error("Onverwacht formaat: verwacht {tasks, people}.");
-      state.tasks = obj.tasks;
-      state.people = obj.people;
-      saveToStorage();
-      alert("Import klaar ✅");
-      renderDashboard();
-      renderTasks();
-      renderPeople();
-      renderMaterials();
-    }catch(e){
-      alert("Import mislukt: " + e.message);
-    }
-  };
-
-  document.getElementById("btn-reset").onclick = async ()=>{
-    if(!confirm("Reset naar defaults? Dit overschrijft je huidige data.")) return;
-    const d = await loadDefaults();
-    state.tasks = d.tasks;
-    state.people = d.people;
-    saveToStorage();
-    alert("Teruggezet ✅");
-    renderDashboard();
-    renderTasks();
-    renderPeople();
-    renderMaterials();
-  };
-}
-
-
-function ymd(d){
-  const pad = (n)=>String(n).padStart(2,"0");
-  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
-}
-function ensureSchedule(t){
-  if(!t.scheduled) t.scheduled = { date:"", timeblock:"", start:"", end:"" };
-  if(typeof t.scheduled !== "object") t.scheduled = { date:"", timeblock:"", start:"", end:"" };
-
-  // migrate legacy date/timeblock -> start/end
-  if(!t.scheduled.start && t.scheduled.date){
-    const tb = parseTimeblock(t.scheduled.timeblock || "") || { sh:9, sm:0, eh:17, em:0 };
-    const pad=(n)=>String(n).padStart(2,"0");
-    t.scheduled.start = `${t.scheduled.date}T${pad(tb.sh)}:${pad(tb.sm)}`;
-    t.scheduled.end = `${t.scheduled.date}T${pad(tb.eh)}:${pad(tb.em)}`;
-  }
-
-  // infer legacy date from start if needed
-  if(t.scheduled.start && !t.scheduled.date){
-    try{
-      const s = new Date(t.scheduled.start);
-      const pad=(n)=>String(n).padStart(2,"0");
-      t.scheduled.date = `${s.getFullYear()}-${pad(s.getMonth()+1)}-${pad(s.getDate())}`;
-    }catch(e){}
-  }
-
-  // if end missing, default +1h
-  if(t.scheduled.start && !t.scheduled.end){
-    try{
-      const s = new Date(t.scheduled.start);
-      s.setHours(s.getHours()+1);
-      const pad=(n)=>String(n).padStart(2,"0");
-      t.scheduled.end = `${s.getFullYear()}-${pad(s.getMonth()+1)}-${pad(s.getDate())}T${pad(s.getHours())}:${pad(s.getMinutes())}`;
-    }catch(e){}
-  }
-}
-
-
-function parseTimeblock(tb){
-  // supports "09:00–12:00", "09:00-12:00", "09:00 – 12:00"
-  const s = (tb||"").trim();
-  if(!s) return null;
-  const m = s.match(/(\d{1,2}):(\d{2})\s*[–-]\s*(\d{1,2}):(\d{2})/);
-  if(!m) return null;
-  const sh = Number(m[1]), sm = Number(m[2]), eh = Number(m[3]), em = Number(m[4]);
-  if([sh,sm,eh,em].some(x=>Number.isNaN(x))) return null;
-  return { startMin: sh*60+sm, endMin: eh*60+em };
-}
-function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
-function startOfWeek(dateObj){
-  // Monday start
-  const d = new Date(dateObj);
-  const day = (d.getDay()+6)%7; // Mon=0
-  d.setDate(d.getDate()-day);
-  d.setHours(0,0,0,0);
-  return d;
-}
-function addDays(d, n){
-  const x = new Date(d);
-  x.setDate(x.getDate()+n);
-  return x;
-}
-function rangeForZoom(focusYmd, zoom){
-  const fd = focusYmd ? new Date(focusYmd+"T00:00:00") : new Date();
-  fd.setHours(0,0,0,0);
-
-  if(zoom === "day"){
-    const start = new Date(fd);
-    const end = addDays(start, 1);
-    return { start, end, unit:"hour" };
-  }
-  if(zoom === "week"){
-    const start = startOfWeek(fd);
-    const end = addDays(start, 7);
-    return { start, end, unit:"day" };
-  }
-  // month
-  const start = new Date(fd.getFullYear(), fd.getMonth(), 1);
-  const end = new Date(fd.getFullYear(), fd.getMonth()+1, 1);
-  return { start, end, unit:"day" };
-}
-
-function scheduledTasksInRange(range){
-  return state.tasks
-    .filter(t => t.scheduled && t.scheduled.start && t.scheduled.end)
-    .map(t=>{
-      const start = new Date(t.scheduled.start);
-      const end = new Date(t.scheduled.end);
-      return { task: t, start, end };
-    })
-    .filter(x => x.end > range.start && x.start < range.end)
-    .sort((a,b)=> (a.start - b.start) || ((a.task.title||"").localeCompare(b.task.title||"")));
-}
-
-
-function statusClass(t){
-  if(t.status === "Afgerond") return "done";
-  if(t.status.startsWith("Wacht") || t.status === "Bezig" || t.status === "Ingepland") return "blocked";
-  return "";
-}
-
-function buildGantt(range){
-  const items = scheduledTasksInRange(range);
-  const wrap = el("div", {class:"gantt"});
-  const grid = el("div", {class:"gantt-grid"});
-  wrap.appendChild(grid);
-
-  const labelW = 320;
-  let cols = 0;
-  let colW = 44;
-  let labels = [];
-
-  if(range.unit === "hour"){
-    cols = 24;
-    colW = 54;
-    labels = Array.from({length:24}, (_,h)=> `${String(h).padStart(2,"0")}:00`);
-  }else{
-    const days = Math.round((range.end - range.start)/(1000*60*60*24));
-    cols = days;
-    colW = 44;
-    labels = Array.from({length:days}, (_,i)=>{
-      const d = addDays(range.start, i);
-      return `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}`;
-    });
-  }
-
-  grid.style.gridTemplateColumns = `${labelW}px repeat(${cols}, ${colW}px)`;
-
-  grid.appendChild(el("div", {class:"gantt-cell gantt-head gantt-label"}, "Klus"));
-  labels.forEach(l=> grid.appendChild(el("div", {class:"gantt-cell gantt-head"}, l)));
-
-  if(items.length === 0){
-    grid.appendChild(el("div", {class:"gantt-cell gantt-label"}, "–"));
-    grid.appendChild(el("div", {class:"gantt-cell", style:`grid-column: span ${cols}`}, "Geen ingeplande klussen in deze periode."));
-    return wrap;
-  }
-
-  items.forEach(({task, start, end})=>{
-    const exec1 = getPersonName((task.assignees||[])[0]);
-    const exec2 = getPersonName((task.assignees||[])[1]);
-
-    const label = el("div", {class:"gantt-cell gantt-label"}, [
-      el("div", {style:"font-weight:900"}, `${task.title}`),
-      el("div", {class:"small"}, `${task.group || "–"} • ${task.location || "–"} • ${exec1}${exec2 && exec2!=="–" ? " + " + exec2 : ""}`)
-    ]);
-    grid.appendChild(label);
-
-    const track = el("div", {class:"gantt-cell gantt-track gantt-row", style:`grid-column: span ${cols}; position:relative; padding:0;`});
-    track.style.height = "54px";
-    grid.appendChild(track);
-
-    let startPos = 0, endPos = cols;
-
-    if(range.unit === "hour"){
-      const s = new Date(Math.max(start.getTime(), range.start.getTime()));
-      const e = new Date(Math.min(end.getTime(), range.end.getTime()));
-      const startMin = s.getHours()*60 + s.getMinutes();
-      const endMin = e.getHours()*60 + e.getMinutes();
-      startPos = clamp(startMin/60, 0, 24);
-      endPos = clamp(endMin/60, 0, 24);
-    }else{
-      const sDay = new Date(start); sDay.setHours(0,0,0,0);
-      const eDay = new Date(end); eDay.setHours(0,0,0,0);
-      const dayIndexStart = Math.floor((sDay - range.start)/(1000*60*60*24));
-      const endsAtMidnight = end.getHours()===0 && end.getMinutes()===0;
-      const dayIndexEnd = Math.floor((eDay - range.start)/(1000*60*60*24)) + (endsAtMidnight ? 0 : 1);
-      startPos = clamp(dayIndexStart, 0, cols);
-      endPos = clamp(dayIndexEnd, 0, cols);
-      if(endPos <= startPos) endPos = startPos + 1;
-    }
-
-    const left = startPos * colW + 6;
-    const width = Math.max(24, (endPos - startPos) * colW - 12);
-
-    const bar = el("div", { class:`gantt-bar ${statusClass(task)}`, style:`left:${left}px; width:${width}px;` }, [
-      el("span", {}, task.title),
-      el("span", {class:"tiny"}, `(${fmtDateTime(task.scheduled.start)} → ${fmtDateTime(task.scheduled.end)})`)
-    ]);
-
-    bar.onclick = ()=>{ switchView("tasks"); openTaskAndScroll(task.id); };
-    track.appendChild(bar);
-  });
-
-  return wrap;
-}
-
-
-function buildCalendar(range){
-  const items = scheduledTasksInRange(range);
-  const byDate = new Map();
-
-  items.forEach(({task, start, end})=>{
-    const cur = new Date(start); cur.setHours(0,0,0,0);
-    const last = new Date(end); last.setHours(0,0,0,0);
-
-    for(let d = new Date(cur); d <= last; d.setDate(d.getDate()+1)){
-      const dayStart = new Date(d);
-      const dayEnd = new Date(d); dayEnd.setDate(dayEnd.getDate()+1);
-      if(end <= dayStart || start >= dayEnd) continue;
-      const key = ymd(dayStart);
-      if(!byDate.has(key)) byDate.set(key, []);
-      byDate.get(key).push({task, start, end});
+      startApp();
+    } catch(e){
+      githubConfig=null;
+      showLoginError(e.message);
+    } finally {
+      $("btn-login").textContent="Verbinden";
+      $("btn-login").disabled=false;
     }
   });
 
-  if(state.planning.zoom === "day"){
-    return buildDayAgenda(range, byDate);
-  }
-
-  if(state.planning.zoom === "week"){
-    const cal = el("div", {class:"cal"});
-    const week = el("div", {class:"cal-week"});
-    cal.appendChild(week);
-    for(let i=0;i<7;i++){
-      const d = addDays(range.start, i);
-      const key = ymd(d);
-      const col = el("div", {class:"cal-week-col"});
-      col.appendChild(el("div", {class:"cal-week-title"}, `${["Ma","Di","Wo","Do","Vr","Za","Zo"][i]} ${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}`));
-      const list = (byDate.get(key)||[]);
-      if(list.length === 0){
-        col.appendChild(el("div", {class:"muted"}, "–"));
-      }else{
-        list.forEach(({task})=>{
-          const chip = el("div", {class:`cal-chip ${statusClass(task)}`}, `${task.title}`);
-          chip.onclick = (e)=>{ e.stopPropagation(); switchView("tasks"); openTaskAndScroll(task.id); };
-          col.appendChild(chip);
-        });
-      }
-      col.onclick = ()=>{ state.planning.zoom = "day"; state.planning.focusDate = key; renderPlanning(); };
-      week.appendChild(col);
+  $("btn-offline")?.addEventListener("click",()=>{
+    githubConfig=null;
+    const local=loadLocal();
+    if(local){
+      state.tasks=local.tasks||[];
+      state.people=local.people||[];
+      state.groups=local.groups||DEFAULT_GROUPS;
+    } else {
+      // Try to load defaults via fetch
+      loadDefaults().then(()=>startApp()).catch(()=>startApp());
+      return;
     }
-    return cal;
-  }
-
-  // month
-  const cal = el("div", {class:"cal"});
-  const dows = ["Ma","Di","Wo","Do","Vr","Za","Zo"];
-  const dowRow = el("div", {class:"cal-month"});
-  dows.forEach(d=>dowRow.appendChild(el("div", {class:"cal-dow"}, d)));
-  cal.appendChild(dowRow);
-
-  const monthGrid = el("div", {class:"cal-month"});
-  cal.appendChild(monthGrid);
-
-  const first = new Date(range.start);
-  const startDow = (first.getDay()+6)%7;
-  for(let i=0;i<startDow;i++){
-    monthGrid.appendChild(el("div", {class:"cal-day", style:"opacity:.35; cursor:default"}, ""));
-  }
-
-  const daysInMonth = Math.round((range.end - range.start)/(1000*60*60*24));
-  for(let i=0;i<daysInMonth;i++){
-    const d = addDays(range.start, i);
-    const key = ymd(d);
-    const cell = el("div", {class:"cal-day"});
-    cell.appendChild(el("div", {class:"cal-day-num"}, String(d.getDate())));
-
-    const list = (byDate.get(key)||[]).slice(0,3);
-    list.forEach(({task})=>{
-      const chip = el("div", {class:`cal-chip ${statusClass(task)}`}, `${task.title}`);
-      chip.onclick = (e)=>{ e.stopPropagation(); switchView("tasks"); openTaskAndScroll(task.id); };
-      cell.appendChild(chip);
-    });
-
-    const extra = (byDate.get(key)||[]).length - list.length;
-    if(extra>0){
-      cell.appendChild(el("div", {class:"small"}, `+${extra} meer…`));
-    }
-
-    cell.onclick = ()=>{ state.planning.zoom = "day"; state.planning.focusDate = key; renderPlanning(); };
-    monthGrid.appendChild(cell);
-  }
-
-  return cal;
-}
-
-
-function buildDayAgenda(range, byDate){
-  const date = ymd(range.start);
-  const list = (byDate.get(date)||[]).slice().sort((a,b)=> a.start - b.start);
-
-  const wrap = el("div", {class:"day-agenda"});
-  const grid = el("div", {class:"day-grid"});
-  wrap.appendChild(grid);
-
-  for(let h=0;h<24;h++){
-    grid.appendChild(el("div", {class:"hour-row"}, [
-      el("div", {class:"hour-label"}, `${String(h).padStart(2,"0")}:00`),
-      el("div", {class:"hour-line"}, "")
-    ]));
-  }
-
-  const layer = el("div", {class:"agenda-layer"});
-  grid.appendChild(layer);
-
-  const pxPerMin = 56/60;
-  list.forEach(({task, start, end})=>{
-    const s = new Date(Math.max(start.getTime(), range.start.getTime()));
-    const e = new Date(Math.min(end.getTime(), range.end.getTime()));
-    const startMin = s.getHours()*60 + s.getMinutes();
-    const endMin = e.getHours()*60 + e.getMinutes();
-
-    const top = startMin * pxPerMin;
-    const height = Math.max(34, (endMin - startMin) * pxPerMin);
-
-    const exec1 = getPersonName((task.assignees||[])[0]);
-    const exec2 = getPersonName((task.assignees||[])[1]);
-
-    const block = el("div", {class:`agenda-block ${statusClass(task)}`, style:`top:${top}px; height:${height}px;`}, [
-      el("div", {}, `${fmtDateTime(task.scheduled.start)} → ${fmtDateTime(task.scheduled.end)} — ${task.title}`),
-      el("div", {class:"tiny"}, `${task.location||"–"} • ${exec1}${exec2 && exec2!=="–" ? " + " + exec2 : ""}`)
-    ]);
-    block.onclick = ()=>{ switchView("tasks"); openTaskAndScroll(task.id); };
-    layer.appendChild(block);
+    state.tasks.forEach(t=>ensureSchedule(t));
+    startApp();
   });
-
-  if(list.length === 0){
-    layer.appendChild(el("div", {class:"muted", style:"position:absolute; top:12px; left:12px;"}, "Geen klussen ingepland op deze dag."));
-  }
-
-  return wrap;
 }
 
-
-function setPlanningButtons(){
-  // mode buttons
-  const mg = document.getElementById("plan-mode-gantt");
-  const mc = document.getElementById("plan-mode-cal");
-  if(mg && mc){
-    mg.classList.toggle("active", state.planning.mode === "gantt");
-    mc.classList.toggle("active", state.planning.mode === "calendar");
-  }
-  // zoom
-  const zm = document.getElementById("zoom-month");
-  const zw = document.getElementById("zoom-week");
-  const zd = document.getElementById("zoom-day");
-  if(zm && zw && zd){
-    zm.classList.toggle("active", state.planning.zoom === "month");
-    zw.classList.toggle("active", state.planning.zoom === "week");
-    zd.classList.toggle("active", state.planning.zoom === "day");
-  }
-
-  const dateInput = document.getElementById("plan-date");
-  if(dateInput){
-    dateInput.value = state.planning.focusDate || ymd(new Date());
-  }
+async function loadDefaults(){
+  try {
+    const [tasksRes,peopleRes]=await Promise.all([fetch("data/tasks.json"),fetch("data/people.json")]);
+    if(tasksRes.ok) state.tasks=await tasksRes.json();
+    if(peopleRes.ok) state.people=await peopleRes.json();
+    state.groups=[...DEFAULT_GROUPS];
+    state.tasks.forEach(t=>ensureSchedule(t));
+    saveLocal();
+  } catch(e){ console.warn("Could not load defaults:",e); }
 }
 
-function wirePlanningControls(){
-  const mg = document.getElementById("plan-mode-gantt");
-  const mc = document.getElementById("plan-mode-cal");
-  if(mg && !mg.dataset.wired){
-    mg.dataset.wired = "1";
-    mg.onclick = ()=>{ state.planning.mode = "gantt"; renderPlanning(); };
-    mc.onclick = ()=>{ state.planning.mode = "calendar"; renderPlanning(); };
-
-    document.getElementById("zoom-month").onclick = ()=>{ state.planning.zoom = "month"; renderPlanning(); };
-    document.getElementById("zoom-week").onclick = ()=>{ state.planning.zoom = "week"; renderPlanning(); };
-    document.getElementById("zoom-day").onclick = ()=>{ state.planning.zoom = "day"; renderPlanning(); };
-
-    document.getElementById("plan-prev").onclick = ()=>{
-  const d = new Date((state.planning.focusDate || ymd(new Date())) + "T00:00:00");
-  if(state.planning.zoom === "day") d.setDate(d.getDate()-1);
-  else if(state.planning.zoom === "week") d.setDate(d.getDate()-7);
-  else d.setMonth(d.getMonth()-1);
-  state.planning.focusDate = ymd(d);
-  renderPlanning();
-};
-
-document.getElementById("plan-next").onclick = ()=>{
-  const d = new Date((state.planning.focusDate || ymd(new Date())) + "T00:00:00");
-  if(state.planning.zoom === "day") d.setDate(d.getDate()+1);
-  else if(state.planning.zoom === "week") d.setDate(d.getDate()+7);
-  else d.setMonth(d.getMonth()+1);
-  state.planning.focusDate = ymd(d);
-  renderPlanning();
-};
-
-document.getElementById("plan-today").onclick = ()=>{
-      state.planning.focusDate = ymd(new Date());
-      renderPlanning();
-    };
-
-    document.getElementById("plan-date").onchange = (e)=>{
-      state.planning.focusDate = e.target.value;
-      renderPlanning();
-    };
-  }
+function showLoginError(msg){
+  const el=$("login-error");
+  el.textContent=msg;
+  el.classList.remove("hidden");
+  setTimeout(()=>el.classList.add("hidden"),5000);
 }
 
-function renderPlanning(){
-  if(!state.planning.focusDate){
-    state.planning.focusDate = ymd(new Date());
-  }
-  wirePlanningControls();
-  setPlanningButtons();
+function startApp(){
+  state.tasks.forEach(t=>ensureSchedule(t));
+  if(!state.groups||!state.groups.length) state.groups=[...DEFAULT_GROUPS];
 
-  const range = rangeForZoom(state.planning.focusDate, state.planning.zoom);
-
-  const wrap = document.getElementById("planning-wrap");
-  wrap.innerHTML = "";
-
-  const header = el("div", {class:"muted", style:"margin:6px 2px 10px 2px;"});
-  const startTxt = range.start.toLocaleDateString("nl-NL");
-  const endTxt = addDays(range.end, -1).toLocaleDateString("nl-NL");
-  header.textContent = state.planning.zoom === "day"
-    ? `Dagoverzicht: ${startTxt} (per uur)`
-    : `${state.planning.zoom[0].toUpperCase()+state.planning.zoom.slice(1)}overzicht: ${startTxt} – ${endTxt}`;
-
-  wrap.appendChild(header);
-
-  const view = state.planning.mode === "gantt" ? buildGantt(range) : buildCalendar(range);
-  wrap.appendChild(view);
-}
-
-
-async function init(){
-  const stored = loadFromStorage();
-  if(stored && stored.tasks && stored.people){
-    state.tasks = stored.tasks;
-    state.people = stored.people;
-  }else{
-    const d = await loadDefaults();
-    state.tasks = d.tasks;
-    state.people = d.people;
-    saveToStorage();
-  }
-
-// Migration v1.5: ensure scheduled.start/end exist (from legacy date/timeblock) and cap assignees to 2.
-state.tasks.forEach(t=>{
-  if(!t.scheduled) t.scheduled = { date:"", timeblock:"", start:"", end:"" };
-  if(!t.scheduled.start && t.scheduled.date){
-    const tb = parseTimeblock(t.scheduled.timeblock || "");
-    const sh = tb ? Math.floor(tb.startMin/60) : 9;
-    const sm = tb ? tb.startMin%60 : 0;
-    const eh = tb ? Math.floor(tb.endMin/60) : 17;
-    const em = tb ? tb.endMin%60 : 0;
-    const pad = (n)=>String(n).padStart(2,"0");
-    t.scheduled.start = `${t.scheduled.date}T${pad(sh)}:${pad(sm)}`;
-    t.scheduled.end = `${t.scheduled.date}T${pad(eh)}:${pad(em)}`;
-  }
-  if(t.scheduled.start && !t.scheduled.end){
-    try{
-      const s = new Date(t.scheduled.start);
-      s.setHours(s.getHours()+1);
-      const pad=(n)=>String(n).padStart(2,"0");
-      t.scheduled.end = `${s.getFullYear()}-${pad(s.getMonth()+1)}-${pad(s.getDate())}T${pad(s.getHours())}:${pad(s.getMinutes())}`;
-    }catch(e){}
-  }
-  if(!Array.isArray(t.assignees)) t.assignees = [];
-  t.assignees = t.assignees.slice(0,2);
-  t.priority = "";
-});
+  $("login-screen").classList.add("hidden");
+  $("app-shell").classList.remove("hidden");
 
   wireUI();
-  renderDashboard();
-  renderTasks();
+  switchView("dashboard");
 }
 
-init();
+// ═══════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════
+(function init(){
+  wireLogin();
+
+  // Auto-login if config saved
+  const savedConfig=loadConfig();
+  if(savedConfig){
+    githubConfig=savedConfig;
+    $("login-token").value=savedConfig.token;
+    $("login-owner").value=savedConfig.owner;
+    $("login-repo").value=savedConfig.repo;
+
+    // Try sync, fallback to local
+    syncFromGitHub().then(synced=>{
+      if(!synced){
+        const local=loadLocal();
+        if(local){
+          state.tasks=local.tasks||[];
+          state.people=local.people||[];
+          state.groups=local.groups||DEFAULT_GROUPS;
+        }
+      }
+      startApp();
+    }).catch(()=>{
+      const local=loadLocal();
+      if(local){
+        state.tasks=local.tasks||[];
+        state.people=local.people||[];
+        state.groups=local.groups||DEFAULT_GROUPS;
+      }
+      startApp();
+    });
+  }
+  // If no saved config, user must login or go offline
+})();

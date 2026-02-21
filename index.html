@@ -3,353 +3,399 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Klusplanner – Verhuizen</title>
+  <title>Klusplanner Pro</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand">
-      <div class="logo">🛠️</div>
-      <div>
-        <div class="brand-title">Klusplanner</div>
-        <div class="brand-sub">Overzicht • Toewijzen • Callsheets • Print/PDF</div>
+
+  <!-- ==================== LOGIN SCREEN ==================== -->
+  <div id="login-screen" class="login-screen">
+    <div class="login-card">
+      <div class="login-brand">
+        <div class="login-logo">
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><rect x="2" y="14" width="12" height="16" rx="2" fill="#DC6B3F"/><rect x="18" y="6" width="12" height="24" rx="2" fill="#3D8B6E"/><rect x="10" y="10" width="12" height="20" rx="2" fill="#C5952E" opacity=".7"/></svg>
+        </div>
+        <h1>Klusplanner <span>Pro</span></h1>
+        <p class="login-subtitle">Verbind met je GitHub repo om samen te werken</p>
       </div>
-    </div>
 
-    <nav class="tabs" aria-label="Navigatie">
-      <button class="tab active" data-view="dashboard">Dashboard</button>
-      <button class="tab" data-view="planning">Planning</button>
-      <button class="tab" data-view="tasks">Klussen</button>
-      <button class="tab" data-view="materials">Materialen</button>
-      <button class="tab" data-view="people">Personen</button>
-      <button class="tab" data-view="settings">Import/Export</button>
-    </nav>
-  </header>
+      <div class="login-form">
+        <div class="login-field">
+          <label for="login-token">GitHub Personal Access Token</label>
+          <input id="login-token" type="password" placeholder="ghp_xxxxxxxxxxxx" autocomplete="off" />
+          <span class="login-hint">Fine-grained token met Contents read/write scope</span>
+        </div>
+        <div class="login-row">
+          <div class="login-field">
+            <label for="login-owner">Repo eigenaar</label>
+            <input id="login-owner" type="text" placeholder="jouw-username" />
+          </div>
+          <div class="login-field">
+            <label for="login-repo">Repo naam</label>
+            <input id="login-repo" type="text" placeholder="klusplanner" />
+          </div>
+        </div>
+        <div class="login-field">
+          <label class="login-check">
+            <input id="login-remember" type="checkbox" checked />
+            <span>Onthoud op dit apparaat</span>
+          </label>
+        </div>
+        <button id="btn-login" class="btn-login" type="button">Verbinden</button>
+        <div id="login-error" class="login-error hidden"></div>
 
-  <main class="container">
-    <!-- DASHBOARD -->
-    <section id="view-dashboard" class="view">
-      <div class="grid cards">
-    <div class="card">
-      <div class="card-label">Voortgang</div>
-      <div class="card-value" id="kpi-progress">–</div>
-      <div class="card-note" id="kpi-progress-note">–</div>
-    </div>
-    <div class="card">
-      <div class="card-label">Uren (realistisch)</div>
-      <div class="card-value" id="kpi-hours">–</div>
-      <div class="card-note" id="kpi-hours-note">–</div>
-    </div>
-    <div class="card">
-      <div class="card-label">Blokkades</div>
-      <div class="card-value" id="kpi-blocked">–</div>
-      <div class="card-note">Wacht op materiaal / hulp</div>
+        <div class="login-divider"><span>of</span></div>
+        <button id="btn-offline" class="btn-offline" type="button">Offline gebruiken (localStorage)</button>
+      </div>
     </div>
   </div>
 
-  <div class="panel">
-        <div class="panel-head">
-          <h2>Komende planning (Ingepland / Bezig)</h2>
-          <div class="panel-actions">
-            <button class="btn" id="btn-add-task">+ Klus toevoegen</button>
-          </div>
-        </div>
-        <div class="table-wrap">
-          <table class="table" id="table-upcoming">
-            <thead>
-              <tr>
-                <th>Klus</th>
-                <th>Locatie</th>
-                <th>Status</th>
-                <th>Start</th>
-                <th>Eind</th>
-                <th>Uitvoerder 1</th>
-                <th>Uitvoerder 2</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </div>
-    </section>
+  <!-- ==================== APP SHELL ==================== -->
+  <div id="app-shell" class="app-shell hidden">
 
-    <!-- TASKS -->
-    <section id="view-tasks" class="view hidden">
-      <div class="panel">
-        <div class="panel-head">
-          <h2>Alle klussen</h2>
-          <div class="panel-actions">
-            <button class="btn" id="btn-add-task-2">+ Klus toevoegen</button>
-          </div>
+    <!-- SIDEBAR -->
+    <aside id="sidebar" class="sidebar">
+      <div class="sidebar-top">
+        <div class="sidebar-brand">
+          <svg width="24" height="24" viewBox="0 0 32 32" fill="none"><rect x="2" y="14" width="12" height="16" rx="2" fill="#DC6B3F"/><rect x="18" y="6" width="12" height="24" rx="2" fill="#3D8B6E"/><rect x="10" y="10" width="12" height="20" rx="2" fill="#C5952E" opacity=".7"/></svg>
+          <span class="sidebar-title">Klusplanner</span>
+          <button id="btn-collapse-sidebar" class="sidebar-collapse" title="Sidebar inklappen">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 17l-5-5 5-5M18 17l-5-5 5-5"/></svg>
+          </button>
         </div>
 
-        <div class="filters">
-          <input id="filter-search" type="search" placeholder="Zoek (titel, locatie)..." />
-          <select id="filter-status"></select>
-          <select id="filter-group"></select>
-          <select id="filter-person"></select>
-<button class="btn secondary" id="btn-clear-filters">Reset filters</button>
-        </div>
-
-        <div class="table-wrap">
-          <table class="table" id="table-tasks">
-            <thead>
-              <tr>
-                <th>Klus</th>
-                <th>Groep</th>
-                <th>Locatie</th>
-                <th>Status</th>
-                <th>Uitvoerder 1</th>
-                <th>Uitvoerder 2</th>
-                <th>Start</th>
-                <th>Eind</th>
-                <th>Uren (R)</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
+        <nav class="sidebar-nav">
+          <button class="nav-item active" data-view="dashboard">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+            <span>Dashboard</span>
+          </button>
+          <button class="nav-item" data-view="overzicht">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/><circle cx="7" cy="6" r="1.5" fill="currentColor"/><circle cx="7" cy="12" r="1.5" fill="currentColor"/><circle cx="7" cy="18" r="1.5" fill="currentColor"/></svg>
+            <span>Overzicht</span>
+          </button>
+          <button class="nav-item" data-view="materials">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><path d="M3.27 6.96L12 12.01l8.73-5.05M12 22.08V12"/></svg>
+            <span>Materialen</span>
+          </button>
+          <button class="nav-item" data-view="people">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+            <span>Personen</span>
+          </button>
+          <button class="nav-item" data-view="settings">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+            <span>Instellingen</span>
+          </button>
+        </nav>
       </div>
 
-      <!-- Detail pane -->
-      <section class="drawer hidden" id="drawer">
-        <div class="drawer-head">
-          <div>
-<h3 id="drawer-title">–</h3>
+      <div class="sidebar-bottom">
+        <div class="sync-indicator" id="sync-indicator">
+          <div class="sync-dot"></div>
+          <span id="sync-label">Offline</span>
+        </div>
+        <button id="btn-logout" class="nav-item nav-logout">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+          <span>Uitloggen</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main id="main-content" class="main-content">
+
+      <!-- TOP BAR -->
+      <header class="main-header">
+        <button id="btn-open-sidebar" class="btn-icon sidebar-toggle hidden" title="Menu">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+        </button>
+        <div class="header-left">
+          <h2 id="page-title" class="page-title">Dashboard</h2>
+        </div>
+        <div class="header-right">
+          <button id="btn-quick-add" class="btn primary" title="Nieuwe klus">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+            <span>Nieuwe klus</span>
+          </button>
+          <button id="btn-sync" class="btn ghost" title="Synchroniseren">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <!-- VIEW: DASHBOARD -->
+      <section id="view-dashboard" class="view">
+        <div class="kpi-grid" id="kpi-grid"></div>
+        <div class="dashboard-columns">
+          <div class="dash-panel" id="dash-upcoming">
+            <div class="dash-panel-head">
+              <h3>Komende klussen</h3>
+            </div>
+            <div id="upcoming-list" class="upcoming-list"></div>
           </div>
-          <div class="drawer-actions">
-            <button class="btn secondary" id="btn-print">Print callsheet</button>
-            <button class="btn" id="btn-save">Opslaan</button>
-            <button class="btn danger" id="btn-close">Sluiten</button>
-          </div>
-        </div>
-
-        <div class="drawer-body">
-          <div class="grid form">
-            <div class="field">
-              <label>Titel</label>
-              <input id="f-title" type="text" />
+          <div class="dash-panel" id="dash-groups">
+            <div class="dash-panel-head">
+              <h3>Per groep</h3>
             </div>
-            <div class="field">
-              <label>Project</label>
-              <input id="f-project" type="text" />
-            </div>
-            <div class="field">
-              <label>Groep</label>
-              <input id="f-group" type="text" />
-            </div>
-            <div class="field">
-              <label>Locatie</label>
-              <input id="f-location" type="text" />
-            </div>
-<div class="field">
-              <label>Status</label>
-              <select id="f-status"></select>
-            </div>
-
-            <div class="field">
-          <label>Uitvoerder 1</label>
-          <select id="f-exec1"></select>
-        </div>
-        <div class="field">
-          <label>Uitvoerder 2</label>
-          <select id="f-exec2"></select>
-        </div>
-            </div>
-
-            <div class="field">
-          <label>Start (datum & tijd)</label>
-          <input id="f-start" type="datetime-local" />
-        </div>
-        <div class="field">
-          <label>Eind (datum & tijd)</label>
-          <input id="f-end" type="datetime-local" />
-        </div>
-
-            <div class="field">
-              <label>Uren inschatting (optimistisch)</label>
-              <input id="f-o" type="number" step="0.25" min="0" />
-            </div>
-            <div class="field">
-              <label>Uren inschatting (realistisch)</label>
-              <input id="f-r" type="number" step="0.25" min="0" />
-            </div>
-            <div class="field">
-              <label>Uren inschatting (worst)</label>
-              <input id="f-w" type="number" step="0.25" min="0" />
-            </div>
-            <div class="field">
-              <label>Werkelijk bestede uren</label>
-              <input id="f-actual" type="number" step="0.25" min="0" />
-            </div>
-
-            <div class="field full">
-              <label>Definition of Done</label>
-              <textarea id="f-dod" rows="2"></textarea>
-            </div>
-
-            <div class="field full">
-              <label>Materialen (1 per regel: item | hoeveelheid | status)</label>
-              <textarea id="f-materials" rows="5" placeholder="Acrylaatkit | 1 koker | kopen"></textarea>
-              <div class="hint">Status-voorbeelden: in huis / kopen / onderweg / geregeld</div>
-            </div>
-
-            <div class="field full">
-              <label>Tools (1 per regel)</label>
-              <textarea id="f-tools" rows="4" placeholder="kitspuit"></textarea>
-            </div>
-
-            <div class="field full">
-              <label>Stappenplan (1 per regel)</label>
-              <textarea id="f-steps" rows="6" placeholder="Ontvetten"></textarea>
-            </div>
-
-            <div class="field full">
-              <label>Notities</label>
-              <textarea id="f-notes" rows="4"></textarea>
-            </div>
+            <div id="group-summary" class="group-summary"></div>
           </div>
         </div>
-
-        <!-- Print-only callsheet -->
-        <article id="print-sheet" class="print-sheet" aria-hidden="true"></article>
       </section>
-    </section>
 
-    
-    <!-- PLANNING -->
-    <section id="view-planning" class="view hidden">
-      <div class="panel">
-        <div class="panel-head">
-          <h2>Planning</h2>
-          <div class="panel-actions">
-            <div class="seg">
-              <button class="seg-btn active" id="plan-mode-gantt" type="button">Balken</button>
-              <button class="seg-btn" id="plan-mode-cal" type="button">Kalender</button>
+      <!-- VIEW: OVERZICHT (3-in-1: Gantt, Agenda, List) -->
+      <section id="view-overzicht" class="view hidden">
+        <!-- Sub-header with mode toggle + filters -->
+        <div class="overzicht-toolbar">
+          <div class="mode-toggle">
+            <button class="mode-btn active" data-mode="list">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+              Lijst
+            </button>
+            <button class="mode-btn" data-mode="gantt">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><rect x="7" y="7" width="8" height="3" rx="1"/><rect x="7" y="13" width="12" height="3" rx="1"/></svg>
+              Gantt
+            </button>
+            <button class="mode-btn" data-mode="agenda">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+              Agenda
+            </button>
+          </div>
+
+          <!-- Agenda sub-controls (shown when agenda mode active) -->
+          <div id="agenda-controls" class="agenda-controls hidden">
+            <div class="mode-toggle small">
+              <button class="mode-btn active" data-zoom="month">Maand</button>
+              <button class="mode-btn" data-zoom="week">Week</button>
+              <button class="mode-btn" data-zoom="day">Dag</button>
+            </div>
+            <div class="date-nav">
+              <button class="btn ghost small" id="cal-prev">‹</button>
+              <span id="cal-label" class="cal-label">—</span>
+              <button class="btn ghost small" id="cal-next">›</button>
+              <button class="btn ghost small" id="cal-today">Vandaag</button>
+            </div>
+          </div>
+
+          <!-- Gantt zoom (shown when gantt mode active) -->
+          <div id="gantt-controls" class="agenda-controls hidden">
+            <div class="mode-toggle small">
+              <button class="mode-btn active" data-gzoom="month">Maand</button>
+              <button class="mode-btn" data-gzoom="week">Week</button>
+            </div>
+            <div class="date-nav">
+              <button class="btn ghost small" id="gantt-prev">‹</button>
+              <span id="gantt-label" class="cal-label">—</span>
+              <button class="btn ghost small" id="gantt-next">›</button>
+              <button class="btn ghost small" id="gantt-today">Vandaag</button>
             </div>
           </div>
         </div>
 
-        <div class="planning-controls">
-          <div class="seg">
-            <button class="seg-btn active" id="zoom-month" type="button">Maand</button>
-            <button class="seg-btn" id="zoom-week" type="button">Week</button>
-            <button class="seg-btn" id="zoom-day" type="button">Dag</button>
+        <!-- Filters (always visible) -->
+        <div class="filter-bar">
+          <div class="filter-search-wrap">
+            <svg class="filter-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            <input id="filter-search" type="search" placeholder="Zoek op titel, locatie..." />
           </div>
-
-          <div class="plan-date">
-            <button class="btn secondary" id="plan-prev" type="button">◀</button>
-            <button class="btn secondary" id="plan-next" type="button">▶</button>
-            <button class="btn secondary" id="plan-today" type="button">Vandaag</button>
-            <input type="date" id="plan-date" />
-          </div>
-
-          <div class="plan-legend">
-            <span class="tag"><span class="dot good"></span> Afgerond</span>
-            <span class="tag"><span class="dot warn"></span> Ingepland/Bezig/Wacht</span>
-            <span class="tag"><span class="dot bad"></span> Backlog</span>
-          </div>
+          <select id="filter-status"><option value="">Alle statussen</option></select>
+          <select id="filter-group"><option value="">Alle groepen</option></select>
+          <select id="filter-person"><option value="">Alle personen</option></select>
+          <select id="filter-project"><option value="">Alle projecten</option></select>
+          <button class="btn ghost small" id="btn-clear-filters">Reset</button>
         </div>
 
-        <div id="planning-wrap">
-          <!-- renders here -->
+        <!-- Content area -->
+        <div id="overzicht-content" class="overzicht-content">
+          <!-- Rendered by JS -->
         </div>
-      </div>
-    </section>
+      </section>
 
-<!-- MATERIALS -->
-    <section id="view-materials" class="view hidden">
-      <div class="panel">
-        <div class="panel-head">
-          <h2>Materialenlijst (geaggregeerd)</h2>
-          <div class="panel-actions">
-            <button class="btn secondary" id="btn-refresh-materials">Ververs</button>
+      <!-- VIEW: MATERIALS -->
+      <section id="view-materials" class="view hidden">
+        <div class="panel">
+          <div class="panel-head">
+            <p class="panel-desc">Materialen uit openstaande klussen — handig voor 1x naar de bouwmarkt.</p>
+            <div class="filter-bar compact">
+              <select id="mat-filter-status">
+                <option value="">Alle statussen</option>
+                <option value="kopen">Kopen</option>
+                <option value="kijken">Kijken</option>
+                <option value="in huis">In huis</option>
+                <option value="onderweg">Onderweg</option>
+                <option value="geregeld">Geregeld</option>
+              </select>
+            </div>
           </div>
+          <div id="materials-table-wrap" class="table-wrap"></div>
         </div>
-        <p class="muted">Toont materialen uit klussen die niet “Afgerond” zijn. Handig voor 1x bouwmarkt.</p>
-        <div class="table-wrap">
-          <table class="table" id="table-materials">
-            <thead>
-              <tr>
-                <th>Materiaal</th>
-                <th>Hoeveelheid (samengevoegd)</th>
-                <th>Status(sen)</th>
-                <th>Klussen</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </div>
-    </section>
+      </section>
 
-    <!-- PEOPLE -->
-    <section id="view-people" class="view hidden">
-      <div class="panel">
-        <div class="panel-head">
-          <h2>Personen</h2>
-          <div class="panel-actions">
-            <button class="btn" id="btn-add-person">+ Persoon toevoegen</button>
+      <!-- VIEW: PEOPLE -->
+      <section id="view-people" class="view hidden">
+        <div class="panel">
+          <div class="panel-head">
+            <p class="panel-desc">Personen beheren. Voeg mensen toe die meewerken aan klussen.</p>
+            <button class="btn primary" id="btn-add-person">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+              Persoon toevoegen
+            </button>
           </div>
+          <div id="people-table-wrap" class="table-wrap"></div>
         </div>
-        <p class="muted">Deze lijst is los van je klussen. IDs blijven stabiel, namen kun je aanpassen.</p>
+      </section>
 
-        <div class="table-wrap">
-          <table class="table" id="table-people">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Naam</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </div>
-    </section>
-
-    <!-- SETTINGS -->
-    <section id="view-settings" class="view hidden">
-      <div class="panel">
-        <div class="panel-head">
-          <h2>Import / Export</h2>
-        </div>
-
-        <div class="grid cards">
-          <div class="card">
-            <div class="card-label">Export</div>
-            <div class="card-note">Download je huidige data (klussen + personen) als één JSON-bestand.</div>
-            <button class="btn" id="btn-export">Export JSON</button>
+      <!-- VIEW: SETTINGS -->
+      <section id="view-settings" class="view hidden">
+        <div class="settings-grid">
+          <div class="panel">
+            <h3>Import / Export</h3>
+            <p class="panel-desc">Download of importeer je data als JSON.</p>
+            <div class="settings-actions">
+              <button class="btn primary" id="btn-export">Exporteer JSON</button>
+              <div class="file-upload">
+                <input type="file" id="file-import" accept="application/json" />
+                <button class="btn secondary" id="btn-import">Importeer JSON</button>
+              </div>
+            </div>
           </div>
-          <div class="card">
-            <div class="card-label">Import</div>
-            <div class="card-note">Importeer een eerder exportbestand (overschrijft huidige data).</div>
-            <input type="file" id="file-import" accept="application/json" />
-            <button class="btn" id="btn-import">Import JSON</button>
+          <div class="panel">
+            <h3>iCal Agenda Sync</h3>
+            <p class="panel-desc">Download een .ics bestand om in Apple Agenda (of andere) te importeren. Alle ingeplande klussen komen als afspraken in je agenda.</p>
+            <div class="settings-actions">
+              <button class="btn primary" id="btn-ical">Download .ics</button>
+            </div>
           </div>
-          <div class="card">
-            <div class="card-label">Reset</div>
-            <div class="card-note">Zet alles terug naar de meegeleverde startdata.</div>
+          <div class="panel">
+            <h3>Groepen beheren</h3>
+            <p class="panel-desc">Voeg nieuwe groepen toe of pas kleuren aan.</p>
+            <div id="groups-manager"></div>
+            <div class="settings-actions" style="margin-top:12px">
+              <input id="new-group-name" type="text" placeholder="Nieuwe groep naam..." class="input-inline" />
+              <button class="btn secondary" id="btn-add-group">+ Groep</button>
+            </div>
+          </div>
+          <div class="panel danger-zone">
+            <h3>Danger zone</h3>
+            <p class="panel-desc">Reset alle data naar de oorspronkelijke standaardwaarden.</p>
             <button class="btn danger" id="btn-reset">Reset naar defaults</button>
           </div>
         </div>
+      </section>
 
-        <div class="panel subtle">
-          <h3>Tip: PDF export per klus</h3>
-          <p>Open een klus → klik <strong>Print callsheet</strong> → kies <em>Opslaan als PDF</em> in je printmenu.</p>
+    </main>
+  </div>
+
+  <!-- ==================== TASK DETAIL MODAL ==================== -->
+  <div id="task-modal" class="modal-overlay hidden">
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-header">
+        <h3 id="modal-title">Klus bewerken</h3>
+        <div class="modal-actions">
+          <button class="btn secondary" id="btn-print-task">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            Print
+          </button>
+          <button class="btn danger" id="btn-delete-task">Verwijder</button>
+          <button class="btn primary" id="btn-save-task">Opslaan</button>
+          <button class="btn ghost" id="btn-close-modal">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
         </div>
       </div>
-    </section>
-  </main>
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="form-field full">
+            <label>Titel</label>
+            <input id="f-title" type="text" placeholder="Beschrijf de klus..." />
+          </div>
+          <div class="form-field">
+            <label>Project</label>
+            <input id="f-project" type="text" placeholder="Oud huis, Nieuw huis..." list="project-suggestions" />
+            <datalist id="project-suggestions"></datalist>
+          </div>
+          <div class="form-field">
+            <label>Groep</label>
+            <select id="f-group"></select>
+          </div>
+          <div class="form-field">
+            <label>Locatie</label>
+            <input id="f-location" type="text" placeholder="Keuken, Badkamer..." list="location-suggestions" />
+            <datalist id="location-suggestions"></datalist>
+          </div>
+          <div class="form-field">
+            <label>Categorie</label>
+            <input id="f-category" type="text" placeholder="Schilderwerk, Reparatie..." list="category-suggestions" />
+            <datalist id="category-suggestions"></datalist>
+          </div>
+          <div class="form-field">
+            <label>Status</label>
+            <select id="f-status"></select>
+          </div>
+          <div class="form-field">
+            <label>Uitvoerder 1</label>
+            <select id="f-exec1"></select>
+          </div>
+          <div class="form-field">
+            <label>Uitvoerder 2</label>
+            <select id="f-exec2"></select>
+          </div>
+          <div class="form-field">
+            <label>Start</label>
+            <input id="f-start" type="datetime-local" />
+          </div>
+          <div class="form-field">
+            <label>Eind</label>
+            <input id="f-end" type="datetime-local" />
+          </div>
+          <div class="form-field">
+            <label>Uren optimistisch</label>
+            <input id="f-hours-o" type="number" step="0.25" min="0" />
+          </div>
+          <div class="form-field">
+            <label>Uren realistisch</label>
+            <input id="f-hours-r" type="number" step="0.25" min="0" />
+          </div>
+          <div class="form-field">
+            <label>Uren worst case</label>
+            <input id="f-hours-w" type="number" step="0.25" min="0" />
+          </div>
+          <div class="form-field">
+            <label>Werkelijk besteed</label>
+            <input id="f-hours-actual" type="number" step="0.25" min="0" />
+          </div>
+          <div class="form-field full">
+            <label>Definition of Done</label>
+            <textarea id="f-dod" rows="2" placeholder="Wanneer is deze klus echt af?"></textarea>
+          </div>
+          <div class="form-field full">
+            <label>Materialen <span class="label-hint">(1 per regel: item | hoeveelheid | status)</span></label>
+            <textarea id="f-materials" rows="4" placeholder="Acrylaatkit | 1 koker | kopen"></textarea>
+          </div>
+          <div class="form-field full">
+            <label>Tools <span class="label-hint">(1 per regel)</span></label>
+            <textarea id="f-tools" rows="3" placeholder="kitspuit"></textarea>
+          </div>
+          <div class="form-field full">
+            <label>Stappenplan <span class="label-hint">(1 per regel)</span></label>
+            <textarea id="f-steps" rows="4" placeholder="Stap 1..."></textarea>
+          </div>
+          <div class="form-field full">
+            <label>Notities</label>
+            <textarea id="f-notes" rows="3" placeholder="Extra opmerkingen..."></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-  <footer class="footer">
-    <div class="muted">Data wordt lokaal opgeslagen in je browser (localStorage). Je kunt altijd exporteren/importeren.</div>
-  </footer>
+  <!-- PRINT CALLSHEET (hidden, shown only when printing) -->
+  <article id="print-sheet" class="print-sheet" aria-hidden="true"></article>
+
+  <!-- TOAST -->
+  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 
   <script src="app.js"></script>
-  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 </body>
 </html>
