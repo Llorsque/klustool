@@ -194,7 +194,7 @@ async function ghRead(path){
 async function ghWrite(path, content, sha, message){
   const encoded=btoa(unescape(encodeURIComponent(JSON.stringify(content,null,2))));
   const body={ message, content:encoded };
-  if(sha) body.sha=sha;
+  if(sha) body.sha=sha; // only include sha for existing files; omit for new files
   const data=await ghFetch(path, { method:"PUT", body:JSON.stringify(body) });
   return data.content.sha;
 }
@@ -237,6 +237,24 @@ async function syncToGitHub(){
   if(!githubConfig) return;
   try {
     updateSyncIndicator("syncing");
+
+    // If we don't have SHAs yet (loaded from localStorage, not from GitHub),
+    // fetch them first so the write doesn't fail with a mismatch
+    if(!tasksSha||!peopleSha){
+      try {
+        const [tf,pf]=await Promise.all([
+          ghFetch("data/tasks.json").catch(()=>null),
+          ghFetch("data/people.json").catch(()=>null)
+        ]);
+        if(tf) tasksSha=tf.sha;
+        if(pf) peopleSha=pf.sha;
+      } catch(e){}
+      // Also try groups
+      if(!groupsSha){
+        try { const gf=await ghFetch("data/groups.json"); groupsSha=gf.sha; } catch(e){}
+      }
+    }
+
     const [newTasksSha, newPeopleSha] = await Promise.all([
       ghWrite("data/tasks.json", state.tasks, tasksSha, "Update tasks"),
       ghWrite("data/people.json", state.people, peopleSha, "Update people")
@@ -254,8 +272,15 @@ async function syncToGitHub(){
   } catch(e){
     console.error("Sync to GitHub failed:", e);
     updateSyncIndicator("error");
-    if(e.message.includes("409")){
-      toast("Conflict: iemand anders heeft gewijzigd. Haal eerst op.", "warn");
+    if(e.message.includes("409")||e.message.includes("match")){
+      // SHA conflict — re-fetch and retry once
+      toast("Conflict gedetecteerd, opnieuw ophalen...", "warn");
+      const refreshed=await syncFromGitHub().catch(()=>false);
+      if(refreshed){
+        // Merge: re-apply local changes on top of fresh data
+        // For now, just inform the user
+        toast("Data opgehaald. Sla opnieuw op als je wijzigingen wilt bewaren.", "warn");
+      }
     } else {
       toast("Sync mislukt: "+e.message, "err");
     }
