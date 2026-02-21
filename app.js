@@ -191,52 +191,81 @@ async function ghFetch(path, opts={}){
   const res=await fetch(url, { ...opts, headers });
   if(!res.ok){
     const err=await res.json().catch(()=>({}));
-    throw new Error(err.message||`GitHub API ${res.status}`);
+    const e=new Error(err.message||`GitHub ${res.status}`);
+    e.status=res.status;
+    throw e;
   }
   return res.json();
 }
 
+// Read file → {content, sha} or null if 404
 async function ghRead(path){
-  const data=await ghFetch(path);
-  const content=atob(data.content.replace(/\n/g,""));
-  return { content: JSON.parse(content), sha: data.sha };
+  try {
+    const data=await ghFetch(path);
+    const raw=atob(data.content.replace(/\n/g,""));
+    return { content:JSON.parse(raw), sha:data.sha };
+  } catch(e){
+    if(e.status===404) return null;
+    throw e;
+  }
 }
 
+// Get just the SHA of a file, or null if not found
+async function ghSha(path){
+  try { const d=await ghFetch(path); return d.sha; }
+  catch(e){ return null; }
+}
+
+// Write file. Auto-fetches SHA if missing or mismatched.
 async function ghWrite(path, content, sha, message){
   const encoded=btoa(unescape(encodeURIComponent(JSON.stringify(content,null,2))));
-  const body={ message, content:encoded };
-  if(sha) body.sha=sha; // only include sha for existing files; omit for new files
-  const data=await ghFetch(path, { method:"PUT", body:JSON.stringify(body) });
-  return data.content.sha;
+
+  async function attempt(useSha){
+    const body={ message, content:encoded };
+    if(useSha) body.sha=useSha;
+    const data=await ghFetch(path, { method:"PUT", body:JSON.stringify(body) });
+    return data.content.sha;
+  }
+
+  try {
+    return await attempt(sha);
+  } catch(e){
+    // SHA mismatch or file exists without SHA → fetch current SHA and retry
+    if(e.status===409||e.status===422){
+      const currentSha=await ghSha(path);
+      return await attempt(currentSha);
+    }
+    throw e;
+  }
 }
 
 async function ghValidate(){
-  try {
-    await ghFetch("", { method:"GET" });
-    return true;
-  } catch(e){ return false; }
+  try { await ghFetch(""); return true; }
+  catch(e){ return false; }
 }
 
-async function syncFromGitHub(){
-  if(!githubConfig) return;
+// ─── Sync from GitHub ─────────────────────────────────────
+async function syncFromGitHub(silent){
+  if(!githubConfig) return false;
   try {
     updateSyncIndicator("syncing");
-    const [tasksData, peopleData] = await Promise.all([
-      ghRead("data/tasks.json").catch(()=>null),
-      ghRead("data/people.json").catch(()=>null)
-    ]);
-    let configData=null;
-    try { configData=await ghRead("data/config.json"); } catch(e){}
 
-    if(tasksData){ state.tasks=tasksData.content; tasksSha=tasksData.sha; }
-    if(peopleData){ state.people=peopleData.content; peopleSha=peopleData.sha; }
-    if(configData){
-      const cfg=configData.content;
-      if(cfg.groups) state.groups=cfg.groups;
-      if(cfg.statuses) state.statuses=cfg.statuses;
-      if(cfg.locations) state.locations=cfg.locations;
-      if(cfg.categories) state.categories=cfg.categories;
-      configSha=configData.sha;
+    // Read all three files in parallel (ghRead returns null for 404)
+    const [td,pd,cd]=await Promise.all([
+      ghRead("data/tasks.json"),
+      ghRead("data/people.json"),
+      ghRead("data/config.json")
+    ]);
+
+    if(td){ state.tasks=td.content||[]; tasksSha=td.sha; }
+    if(pd){ state.people=pd.content||[]; peopleSha=pd.sha; }
+    if(cd){
+      const c=cd.content||{};
+      if(c.groups?.length) state.groups=c.groups;
+      if(c.statuses?.length) state.statuses=c.statuses;
+      if(c.locations?.length) state.locations=c.locations;
+      if(c.categories?.length) state.categories=c.categories;
+      configSha=cd.sha;
     }
 
     state.tasks.forEach(t=>ensureSchedule(t));
@@ -244,67 +273,36 @@ async function syncFromGitHub(){
     updateSyncIndicator("online");
     return true;
   } catch(e){
-    console.error("Sync from GitHub failed:", e);
+    console.error("syncFrom:", e);
     updateSyncIndicator("error");
-    toast("Sync mislukt: "+e.message, "err");
+    if(!silent) toast("Sync ophalen mislukt: "+e.message,"err");
     return false;
   }
 }
 
+// ─── Sync to GitHub (SEQUENTIAL writes to avoid 409) ──────
 async function syncToGitHub(){
-  if(!githubConfig) return;
+  if(!githubConfig) return false;
   try {
     updateSyncIndicator("syncing");
 
-    // If we don't have SHAs yet (loaded from localStorage, not from GitHub),
-    // fetch them first so the write doesn't fail with a mismatch
-    if(!tasksSha||!peopleSha){
-      try {
-        const [tf,pf]=await Promise.all([
-          ghFetch("data/tasks.json").catch(()=>null),
-          ghFetch("data/people.json").catch(()=>null)
-        ]);
-        if(tf) tasksSha=tf.sha;
-        if(pf) peopleSha=pf.sha;
-      } catch(e){}
-      if(!configSha){
-        try { const cf=await ghFetch("data/config.json"); configSha=cf.sha; } catch(e){}
-      }
-    }
-
-    const configPayload={
+    const cfg={
       groups:state.groups, statuses:state.statuses,
       locations:state.locations, categories:state.categories
     };
 
-    const [newTasksSha, newPeopleSha] = await Promise.all([
-      ghWrite("data/tasks.json", state.tasks, tasksSha, "Update tasks"),
-      ghWrite("data/people.json", state.people, peopleSha, "Update people")
-    ]);
-    tasksSha=newTasksSha;
-    peopleSha=newPeopleSha;
-
-    const newConfigSha=await ghWrite("data/config.json", configPayload, configSha, "Update config").catch(()=>null);
-    if(newConfigSha) configSha=newConfigSha;
+    // Write one at a time — parallel commits cause 409 conflicts
+    tasksSha  =await ghWrite("data/tasks.json",  state.tasks,  tasksSha,  "Update tasks");
+    peopleSha =await ghWrite("data/people.json", state.people, peopleSha, "Update people");
+    configSha =await ghWrite("data/config.json", cfg,          configSha, "Update config");
 
     updateSyncIndicator("online");
     toast("Gesynchroniseerd ✓");
     return true;
   } catch(e){
-    console.error("Sync to GitHub failed:", e);
+    console.error("syncTo:", e);
     updateSyncIndicator("error");
-    if(e.message.includes("409")||e.message.includes("match")){
-      // SHA conflict — re-fetch and retry once
-      toast("Conflict gedetecteerd, opnieuw ophalen...", "warn");
-      const refreshed=await syncFromGitHub().catch(()=>false);
-      if(refreshed){
-        // Merge: re-apply local changes on top of fresh data
-        // For now, just inform the user
-        toast("Data opgehaald. Sla opnieuw op als je wijzigingen wilt bewaren.", "warn");
-      }
-    } else {
-      toast("Sync mislukt: "+e.message, "err");
-    }
+    toast("Sync opslaan mislukt: "+e.message,"err");
     return false;
   }
 }
