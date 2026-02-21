@@ -181,6 +181,7 @@ function ensureSchedule(t){
   }
 
   if(!Array.isArray(t.assignees)) t.assignees=[];
+  if(typeof t.inCalendar==="undefined") t.inCalendar=true; // default: include in calendar
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -271,6 +272,10 @@ async function syncFromGitHub(silent){
 
     state.tasks.forEach(t=>ensureSchedule(t));
     saveLocal();
+
+    // Track .ics SHA for future pushes
+    try { const icsData=await ghSha("klusplanner.ics"); if(icsData) icsSha=icsData; } catch(e){}
+
     updateSyncIndicator("online");
     return true;
   } catch(e){
@@ -296,6 +301,9 @@ async function syncToGitHub(){
     tasksSha  =await ghWrite("data/tasks.json",  state.tasks,  tasksSha,  "Update tasks");
     peopleSha =await ghWrite("data/people.json", state.people, peopleSha, "Update people");
     configSha =await ghWrite("data/config.json", cfg,          configSha, "Update config");
+
+    // Auto-push .ics for live calendar subscriptions
+    await pushICalToGitHub().catch(e=>console.warn("iCal push:",e));
 
     updateSyncIndicator("online");
     toast("Gesynchroniseerd ✓");
@@ -353,14 +361,18 @@ function takeSnapshot(){
 }
 
 function markDirty(){
+  // Always persist to localStorage immediately — survives hard refresh
+  saveLocal();
   if(!isDirty){
     isDirty=true;
+    try { localStorage.setItem(STORAGE_KEY+"_dirty","1"); } catch(e){}
     $("save-bar")?.classList.remove("hidden");
   }
 }
 
 function markClean(){
   isDirty=false;
+  try { localStorage.removeItem(STORAGE_KEY+"_dirty"); } catch(e){}
   $("save-bar")?.classList.add("hidden");
   takeSnapshot();
 }
@@ -622,8 +634,13 @@ function renderListView(container){
     const sc=statusClass(t.status);
     const exec=[getPersonName((t.assignees||[])[0]),getPersonName((t.assignees||[])[1])].filter(x=>x!=="–").join(", ")||"–";
 
+    const calIcon=t.inCalendar!==false&&t.scheduled?.start?'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--primary);flex-shrink:0;margin-left:4px;vertical-align:middle"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>':"";
+    const titleCell=document.createElement("td");
+    titleCell.innerHTML=`<span style="font-weight:600">${escHtml(t.title)}</span>${calIcon}`;
+    titleCell.style.cssText="display:flex;align-items:center;gap:2px;";
+
     tbody.appendChild(h("tr",{onclick:()=>openTaskModal(t.id)},[
-      h("td",{},[h("span",{style:{fontWeight:"600"}},t.title)]),
+      titleCell,
       h("td",{},[h("span",{class:"group-badge",style:{borderColor:gc+"55",background:gc+"15",color:gc}},t.group||"–")]),
       h("td",{class:"cell-muted"},t.location||"–"),
       h("td",{},[h("span",{class:`status-badge ${sc}`},[h("span",{class:"dot"}),t.status])]),
@@ -1124,6 +1141,18 @@ function updateGHSettingsUI(){
     setupBtn.classList.remove("primary");
     setupBtn.classList.add("secondary");
     disconnBtn?.classList.remove("hidden");
+
+    // Show iCal subscription URL
+    const icalBox=$("ical-url-box");
+    const icalUrl=$("ical-url");
+    if(icalBox&&icalUrl){
+      const url=`https://raw.githubusercontent.com/${githubConfig.owner}/${githubConfig.repo}/main/klusplanner.ics`;
+      icalUrl.textContent=url;
+      icalUrl.onclick=()=>{
+        navigator.clipboard?.writeText(url).then(()=>toast("URL gekopieerd ✓")).catch(()=>{});
+      };
+      icalBox.classList.remove("hidden");
+    }
   } else {
     statusText.textContent="Niet verbonden — data wordt lokaal opgeslagen.";
     statusText.style.color="";
@@ -1132,6 +1161,7 @@ function updateGHSettingsUI(){
     setupBtn.classList.remove("secondary");
     setupBtn.classList.add("primary");
     disconnBtn?.classList.add("hidden");
+    $("ical-url-box")?.classList.add("hidden");
   }
 }
 
@@ -1417,6 +1447,18 @@ function openTaskModal(taskId){
   $("f-category").value=t.category||"";
   $("f-start").value=t.scheduled?.start||"";
   $("f-end").value=t.scheduled?.end||"";
+
+  // Calendar toggle
+  const calBtn=$("f-calendar");
+  const calLabel=$("f-calendar-label");
+  const calOn=t.inCalendar!==false; // default true
+  calBtn.classList.toggle("on",calOn);
+  calLabel.textContent=calOn?"Ja":"Nee";
+  calBtn.onclick=()=>{
+    const nowOn=calBtn.classList.toggle("on");
+    calLabel.textContent=nowOn?"Ja":"Nee";
+  };
+
   $("f-hours-o").value=t.estimate_hours?.optimistic??0;
   $("f-hours-r").value=t.estimate_hours?.realistic??0;
   $("f-hours-w").value=t.estimate_hours?.worst??0;
@@ -1455,6 +1497,7 @@ function readTaskForm(){
   t.assignees=[$("f-exec1").value,$("f-exec2").value].filter(Boolean);
   t.scheduled.start=$("f-start").value;
   t.scheduled.end=$("f-end").value;
+  t.inCalendar=$("f-calendar")?.classList.contains("on")??true;
   if(t.scheduled.start){
     try { t.scheduled.date=t.scheduled.start.split("T")[0]; } catch(e){}
   }
@@ -1553,7 +1596,8 @@ function addNewTask(){
     materials:[],
     tools:[],
     steps:[],
-    notes:""
+    notes:"",
+    inCalendar:true
   };
   state.tasks.push(t);
   markDirty();
@@ -1589,9 +1633,9 @@ function printTask(){
 // ═══════════════════════════════════════════════════════════
 // iCAL EXPORT
 // ═══════════════════════════════════════════════════════════
-function generateICal(){
-  const scheduled=state.tasks.filter(t=>t.scheduled?.start);
-  if(!scheduled.length){ toast("Geen ingeplande klussen","warn"); return; }
+function buildICalString(){
+  const scheduled=state.tasks.filter(t=>t.scheduled?.start&&t.inCalendar!==false);
+  if(!scheduled.length) return null;
 
   const fmtIcal=(iso)=>{
     const d=new Date(iso);
@@ -1599,10 +1643,11 @@ function generateICal(){
     return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}T${p(d.getHours())}${p(d.getMinutes())}00`;
   };
 
-  let cal="BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Klusplanner Pro//NL\r\nCALSCALE:GREGORIAN\r\n";
+  let cal="BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Klusplanner Pro//NL\r\nCALSCALE:GREGORIAN\r\nMETHOD:PUBLISH\r\nX-WR-CALNAME:Klusplanner\r\n";
   scheduled.forEach(t=>{
     const start=fmtIcal(t.scheduled.start);
     const end=t.scheduled.end?fmtIcal(t.scheduled.end):fmtIcal(new Date(new Date(t.scheduled.start).getTime()+36e5).toISOString());
+    const uid=`${t.id}@klusplanner`;
     const desc=[
       t.group?`Groep: ${t.group}`:"",
       t.definition_of_done?`DoD: ${t.definition_of_done}`:"",
@@ -1611,17 +1656,52 @@ function generateICal(){
       t.notes||""
     ].filter(Boolean).join("\\n");
 
-    cal+=`BEGIN:VEVENT\r\nDTSTART:${start}\r\nDTEND:${end}\r\nSUMMARY:${(t.title||"").replace(/[,;\\]/g," ")}\r\nLOCATION:${(t.location||"").replace(/[,;\\]/g," ")}\r\nDESCRIPTION:${desc.replace(/[\\]/g,"\\\\").replace(/\n/g,"\\n")}\r\nSTATUS:${t.status==="Afgerond"?"COMPLETED":"CONFIRMED"}\r\nEND:VEVENT\r\n`;
+    cal+=`BEGIN:VEVENT\r\nUID:${uid}\r\nDTSTAMP:${fmtIcal(new Date().toISOString())}\r\nDTSTART:${start}\r\nDTEND:${end}\r\nSUMMARY:${(t.title||"").replace(/[,;\\]/g," ")}\r\nLOCATION:${(t.location||"").replace(/[,;\\]/g," ")}\r\nDESCRIPTION:${desc.replace(/[\\]/g,"\\\\").replace(/\n/g,"\\n")}\r\nSTATUS:${t.status==="Afgerond"?"COMPLETED":"CONFIRMED"}\r\nEND:VEVENT\r\n`;
   });
   cal+="END:VCALENDAR\r\n";
+  return cal;
+}
 
+function generateICal(){
+  const cal=buildICalString();
+  if(!cal){ toast("Geen klussen met agenda-vinkje en startdatum","warn"); return; }
+
+  const count=state.tasks.filter(t=>t.scheduled?.start&&t.inCalendar!==false).length;
   const blob=new Blob([cal],{type:"text/calendar"});
   const a=document.createElement("a");
   a.href=URL.createObjectURL(blob);
   a.download="klusplanner.ics";
   a.click();
   URL.revokeObjectURL(a.href);
-  toast(`${scheduled.length} klussen geëxporteerd als .ics`);
+  toast(`${count} klussen geëxporteerd als .ics`);
+}
+
+// Push .ics to GitHub so calendar apps can subscribe to the URL
+let icsSha=null;
+async function pushICalToGitHub(){
+  if(!githubConfig) return;
+  const cal=buildICalString()||"BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Klusplanner Pro//NL\r\nEND:VCALENDAR\r\n";
+  const encoded=btoa(unescape(encodeURIComponent(cal)));
+  const body={ message:"Update klusplanner.ics", content:encoded };
+  if(icsSha) body.sha=icsSha;
+
+  try {
+    const data=await ghFetch("klusplanner.ics",{ method:"PUT", body:JSON.stringify(body) });
+    icsSha=data.content.sha;
+  } catch(e){
+    if(e.status===409||e.status===422){
+      // SHA mismatch — fetch and retry
+      const sha=await ghSha("klusplanner.ics");
+      const retryBody={ message:"Update klusplanner.ics", content:encoded };
+      if(sha) retryBody.sha=sha;
+      try {
+        const data=await ghFetch("klusplanner.ics",{ method:"PUT", body:JSON.stringify(retryBody) });
+        icsSha=data.content.sha;
+      } catch(e2){ console.warn("iCal push retry failed:",e2); }
+    } else {
+      console.warn("iCal push failed:",e);
+    }
+  }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1831,6 +1911,7 @@ function wireUI(){
   $("btn-clear-local")?.addEventListener("click",()=>{
     if(!confirm("Lokale cache wissen? Als je met GitHub werkt, worden de data opnieuw opgehaald bij volgende sync.")) return;
     localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(STORAGE_KEY+"_dirty");
     tasksSha=null; peopleSha=null; configSha=null;
     toast("Lokale cache gewist — herlaad de pagina","ok");
     setTimeout(()=>location.reload(),1500);
@@ -1994,6 +2075,14 @@ function startApp(){
   if(!state.categories||!state.categories.length) state.categories=[...DEFAULT_CATEGORIES];
 
   takeSnapshot();
+
+  // Restore dirty state from before hard refresh
+  try {
+    if(localStorage.getItem(STORAGE_KEY+"_dirty")==="1"){
+      isDirty=true;
+      $("save-bar")?.classList.remove("hidden");
+    }
+  } catch(e){}
 
   $("login-screen").classList.add("hidden");
   $("app-shell").classList.remove("hidden");

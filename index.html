@@ -263,7 +263,14 @@
           </div>
           <div class="panel">
             <h3>iCal Agenda Sync</h3>
-            <p class="panel-desc">Download een .ics bestand voor Apple Agenda.</p>
+            <p class="panel-desc">Klussen met "In agenda: Ja" worden automatisch meegestuurd naar GitHub bij elke sync. Abonneer je agenda op de URL hieronder voor live updates.</p>
+            <div id="ical-url-box" class="gh-connection-info hidden" style="margin-bottom:10px">
+              <div class="gh-conn-row" style="flex-wrap:wrap;gap:4px">
+                <span class="gh-conn-label">URL:</span>
+                <code id="ical-url" style="font-size:12px;word-break:break-all;cursor:pointer" title="Klik om te kopiëren">–</code>
+              </div>
+              <p style="font-size:11px;color:var(--text-tertiary);margin-top:6px">iPhone: Instellingen → Agenda → Accounts → Voeg account toe → Anders → Voeg agenda-abonnement toe → plak URL</p>
+            </div>
             <div class="settings-actions">
               <button class="btn primary" id="btn-ical">Download .ics</button>
             </div>
@@ -381,6 +388,15 @@
           <div class="form-field">
             <label>Eind</label>
             <input id="f-end" type="datetime-local" />
+          </div>
+          <div class="form-field">
+            <label>In agenda</label>
+            <div class="toggle-wrap" id="f-calendar-wrap">
+              <button type="button" class="toggle-btn" id="f-calendar" title="Toon in iCal agenda">
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                <span class="toggle-label" id="f-calendar-label">Ja</span>
+              </button>
+            </div>
           </div>
           <div class="form-field">
             <label>Uren optimistisch</label>
