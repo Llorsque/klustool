@@ -52,6 +52,10 @@ let tasksSha     = null;
 let peopleSha    = null;
 let groupsSha    = null;
 
+// ─── Dirty state (unsaved changes) ───────────────────────
+let isDirty      = false;
+let cleanSnapshot= null;  // JSON string of last saved state
+
 // ─── Utility ───────────────────────────────────────────────
 function $(id)       { return document.getElementById(id); }
 function $$(sel)     { return document.querySelectorAll(sel); }
@@ -321,14 +325,52 @@ function loadSession(){
   try { return JSON.parse(localStorage.getItem(SESSION_KEY)); } catch(e){ return null; }
 }
 
-// ─── Save (auto-sync if online) ──────────────────────────
-async function save(silent=false){
+// ─── Dirty state management ──────────────────────────────
+function takeSnapshot(){
+  cleanSnapshot=JSON.stringify({tasks:state.tasks,people:state.people,groups:state.groups});
+}
+
+function markDirty(){
+  if(!isDirty){
+    isDirty=true;
+    $("save-bar")?.classList.remove("hidden");
+  }
+}
+
+function markClean(){
+  isDirty=false;
+  $("save-bar")?.classList.add("hidden");
+  takeSnapshot();
+}
+
+async function commitChanges(){
+  // 1. Save locally (always instant)
   saveLocal();
+
+  // 2. Sync to GitHub if connected
   if(githubConfig){
-    await syncToGitHub();
-  } else if(!silent){
+    const ok=await syncToGitHub();
+    if(!ok) return; // toast already shown by syncToGitHub
+  } else {
     toast("Opgeslagen ✓");
   }
+
+  markClean();
+}
+
+function discardChanges(){
+  if(!cleanSnapshot) return;
+  try {
+    const snap=JSON.parse(cleanSnapshot);
+    state.tasks=snap.tasks||[];
+    state.people=snap.people||[];
+    state.groups=snap.groups||[...DEFAULT_GROUPS];
+    state.tasks.forEach(t=>ensureSchedule(t));
+  } catch(e){ return; }
+
+  markClean();
+  toast("Wijzigingen ongedaan gemaakt");
+  switchView(state.currentView);
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -873,9 +915,7 @@ function renderMaterials(){
       if(!task) return;
       const mat=task.materials[r.matIndex];
       if(typeof mat==="object") mat.status=statusSel.value;
-      saveLocal();
-      if(githubConfig) syncToGitHub();
-      toast("Status bijgewerkt ✓");
+      markDirty();
     });
 
     tbody.appendChild(h("tr",{style:{cursor:"default"}},[
@@ -923,9 +963,7 @@ function renderPeople(){
       const newName=nameInput.value.trim();
       if(!newName){ nameInput.value=p.name; return; }
       p.name=newName;
-      saveLocal();
-      if(githubConfig) syncToGitHub();
-      toast(`Naam gewijzigd naar "${newName}" ✓`);
+      markDirty();
     });
 
     // Delete button
@@ -941,8 +979,7 @@ function renderPeople(){
         if(t.owner===p.id) t.owner="";
         t.assignees=(t.assignees||[]).filter(id=>id!==p.id);
       });
-      saveLocal();
-      if(githubConfig) syncToGitHub();
+      markDirty();
       toast(`${p.name} verwijderd`);
       renderPeople();
     });
@@ -1117,9 +1154,7 @@ function renderGroupsManager(){
     colorInput.addEventListener("change",e=>{
       e.stopPropagation();
       g.color=colorInput.value;
-      saveLocal();
-      if(githubConfig) syncToGitHub();
-      toast("Kleur bijgewerkt ✓");
+      markDirty();
     });
     tdColor.appendChild(colorInput);
 
@@ -1143,9 +1178,7 @@ function renderGroupsManager(){
       });
       g.name=newName;
       g.id=slugify(newName)||g.id;
-      saveLocal();
-      if(githubConfig) syncToGitHub();
-      toast(`Groep hernoemd naar "${newName}" ✓`);
+      markDirty();
     });
     tdName.appendChild(nameInput);
 
@@ -1164,8 +1197,7 @@ function renderGroupsManager(){
       e.preventDefault();
       if(!confirm(`Groep "${g.name}" verwijderen?\n\n${taskCount} klus(sen) behouden hun groepsnaam maar de groep verdwijnt uit de filters.`)) return;
       state.groups=state.groups.filter(x=>x.id!==g.id);
-      saveLocal();
-      if(githubConfig) syncToGitHub();
+      markDirty();
       toast(`Groep "${g.name}" verwijderd`);
       renderGroupsManager();
     });
@@ -1305,7 +1337,7 @@ function saveTask(){
     }
   }
 
-  save();
+  markDirty();
   closeTaskModal();
 
   // Auto-navigate calendar/gantt to show the saved task's date
@@ -1323,7 +1355,7 @@ function deleteTask(){
   if(!t) return;
   if(!confirm(`Verwijder "${t.title}"? Dit kan niet ongedaan worden.`)) return;
   state.tasks=state.tasks.filter(x=>x.id!==state.selectedTaskId);
-  save();
+  markDirty();
   closeTaskModal();
   if(state.currentView==="dashboard") renderDashboard();
   else if(state.currentView==="overzicht") renderOverzicht();
@@ -1358,7 +1390,7 @@ function addNewTask(){
     notes:""
   };
   state.tasks.push(t);
-  saveLocal();
+  markDirty();
   openTaskModal(id);
 }
 
@@ -1451,7 +1483,7 @@ async function importJSON(){
     state.people=obj.people;
     if(obj.groups) state.groups=obj.groups;
     state.tasks.forEach(t=>ensureSchedule(t));
-    await save();
+    await commitChanges();
     toast("Import klaar ✓");
     switchView(state.currentView);
   } catch(e){
@@ -1463,6 +1495,21 @@ async function importJSON(){
 // WIRE UI
 // ═══════════════════════════════════════════════════════════
 function wireUI(){
+  // Save bar: commit / discard
+  $("btn-commit")?.addEventListener("click",async ()=>{
+    $("btn-commit").disabled=true;
+    $("btn-commit").innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M23 4v6h-6M1 20v-6h6"/></svg> Bezig...';
+    await commitChanges();
+    $("btn-commit").disabled=false;
+    $("btn-commit").innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg> Opslaan &amp; sync';
+  });
+  $("btn-discard")?.addEventListener("click",discardChanges);
+
+  // Warn on page close if dirty
+  window.addEventListener("beforeunload",e=>{
+    if(isDirty){ e.preventDefault(); e.returnValue=""; }
+  });
+
   // Navigation
   $$(".nav-item[data-view]").forEach(btn=>{
     btn.addEventListener("click",()=>switchView(btn.dataset.view));
@@ -1482,7 +1529,10 @@ function wireUI(){
   // Sync
   $("btn-sync")?.addEventListener("click",async ()=>{
     if(githubConfig){
+      if(isDirty&&!confirm("Je hebt onopgeslagen wijzigingen. Eerst opslaan, of overschrijven met GitHub data?")) return;
       await syncFromGitHub();
+      takeSnapshot();
+      markClean();
       switchView(state.currentView);
       toast("Data opgehaald ✓");
     } else {
@@ -1557,7 +1607,7 @@ function wireUI(){
     const existing=new Set(state.people.map(p=>p.id));
     if(existing.has(id)){ let n=2; while(existing.has(`${id}-${n}`)) n++; id=`${id}-${n}`; }
     state.people.push({id,name:name.trim()});
-    save();
+    markDirty();
     renderPeople();
   });
 
@@ -1573,7 +1623,7 @@ function wireUI(){
     const color=GROUP_COLORS[state.groups.length%GROUP_COLORS.length];
     state.groups.push({id,name,color});
     $("new-group-name").value="";
-    save();
+    markDirty();
     renderGroupsManager();
   });
   $("btn-reset")?.addEventListener("click",async ()=>{
@@ -1584,7 +1634,7 @@ function wireUI(){
       state.people=await peopleRes.json();
       state.groups=[...DEFAULT_GROUPS];
       state.tasks.forEach(t=>ensureSchedule(t));
-      await save();
+      await commitChanges();
       toast("Teruggezet ✓");
       switchView("dashboard");
     } catch(e){
@@ -1594,6 +1644,7 @@ function wireUI(){
 
   // Logout — clears user session, keeps GitHub config
   $("btn-logout")?.addEventListener("click",()=>{
+    if(isDirty&&!confirm("Je hebt onopgeslagen wijzigingen. Toch uitloggen?")) return;
     state.currentUser=null;
     localStorage.removeItem(SESSION_KEY);
     isOnline=false;
@@ -1727,6 +1778,9 @@ function showLoginError(msg){
 function startApp(){
   state.tasks.forEach(t=>ensureSchedule(t));
   if(!state.groups||!state.groups.length) state.groups=[...DEFAULT_GROUPS];
+
+  // Establish clean baseline for dirty tracking
+  takeSnapshot();
 
   $("login-screen").classList.add("hidden");
   $("app-shell").classList.remove("hidden");

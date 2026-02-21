@@ -1152,6 +1152,61 @@ a:hover { text-decoration: underline; }
 .form-field textarea { resize: vertical; min-height: 60px; }
 
 /* ============================================
+   SAVE BAR (floating bottom bar for unsaved changes)
+   ============================================ */
+.save-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 90;
+  padding: 0 20px 20px;
+  pointer-events: none;
+  animation: saveBarIn .3s ease;
+}
+@keyframes saveBarIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+.save-bar-inner {
+  max-width: 520px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 16px 12px 20px;
+  background: var(--sidebar-bg);
+  color: white;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl), 0 0 0 1px rgba(255,255,255,.06);
+  pointer-events: all;
+}
+.save-bar-text {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: rgba(255,255,255,.85);
+}
+.save-bar-text svg { color: var(--warning); flex-shrink: 0; }
+.save-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.save-bar .btn.ghost { color: rgba(255,255,255,.6); }
+.save-bar .btn.ghost:hover { color: white; background: rgba(255,255,255,.1); }
+.save-bar .btn.primary {
+  background: var(--primary);
+  color: white;
+  padding: 8px 18px;
+}
+.save-bar .btn.primary:hover { background: var(--primary-hover); }
+
+/* Adjust toast position when save bar is visible */
+.save-bar:not(.hidden) ~ .toast { bottom: 80px; }
+
+/* ============================================
    TOAST
    ============================================ */
 .toast {

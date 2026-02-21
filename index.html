@@ -394,6 +394,23 @@
   <!-- PRINT CALLSHEET (hidden, shown only when printing) -->
   <article id="print-sheet" class="print-sheet" aria-hidden="true"></article>
 
+  <!-- SAVE BAR (appears when there are unsaved changes) -->
+  <div id="save-bar" class="save-bar hidden">
+    <div class="save-bar-inner">
+      <span class="save-bar-text">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+        Onopgeslagen wijzigingen
+      </span>
+      <div class="save-bar-actions">
+        <button id="btn-discard" class="btn ghost small">Ongedaan maken</button>
+        <button id="btn-commit" class="btn primary">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+          Opslaan &amp; sync
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- TOAST -->
   <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 
