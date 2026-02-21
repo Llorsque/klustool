@@ -468,6 +468,30 @@
     </div>
   </div>
 
+  <!-- TASK NOTIFICATION MODAL -->
+  <div id="notify-modal" class="modal-overlay hidden">
+    <div class="modal notify-modal" role="dialog" aria-modal="true">
+      <div class="modal-header">
+        <h3 id="notify-title">⏰ Klus eindtijd bereikt</h3>
+        <button class="btn ghost" id="notify-close">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="modal-body" style="padding:16px 24px">
+        <p id="notify-message" style="font-size:14px;margin-bottom:16px"></p>
+        <div id="notify-reschedule" class="form-field" style="margin-bottom:16px">
+          <label>Nieuwe eindtijd</label>
+          <input id="notify-new-end" type="datetime-local" />
+        </div>
+        <div style="display:flex;gap:10px;justify-content:flex-end">
+          <button class="btn secondary" id="notify-snooze">Later herinneren</button>
+          <button class="btn primary" id="notify-extend">Verlengen</button>
+          <button class="btn primary" style="background:var(--success)" id="notify-done">✓ Afronden</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- TOAST -->
   <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 

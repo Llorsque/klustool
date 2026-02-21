@@ -1162,6 +1162,7 @@ a:hover { text-decoration: underline; }
   from { opacity: 0; transform: translateY(16px) scale(.97); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
+.notify-modal { max-width: 480px; }
 .modal-header {
   display: flex;
   align-items: center;

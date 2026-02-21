@@ -2080,6 +2080,132 @@ function showLoginError(msg){
   setTimeout(()=>el.classList.add("hidden"),4000);
 }
 
+// ═══════════════════════════════════════════════════════════
+// TASK SCHEDULER — auto-start & end-time notifications
+// ═══════════════════════════════════════════════════════════
+const snoozedEnds=new Set();
+let notifyTaskId=null;
+let schedulerTimer=null;
+
+function startScheduler(){
+  if(schedulerTimer) clearInterval(schedulerTimer);
+  runScheduler();
+  schedulerTimer=setInterval(runScheduler, 30000);
+}
+
+function runScheduler(){
+  const now=new Date();
+  let changed=false;
+
+  state.tasks.forEach(t=>{
+    if(!t.scheduled?.start) return;
+    const start=new Date(t.scheduled.start);
+    const end=t.scheduled.end?new Date(t.scheduled.end):null;
+
+    // Auto-start: set to "Bezig" when start time is reached
+    if(now>=start && (t.status==="Backlog"||t.status==="Ingepland")){
+      t.status="Bezig";
+      changed=true;
+      showBrowserNotif(`🔨 "${t.title}" is gestart`, t.location?`Locatie: ${t.location}`:"");
+    }
+
+    // End-time notification: prompt when end time is reached
+    if(end && now>=end && t.status==="Bezig" && !snoozedEnds.has(t.id)){
+      if(!notifyTaskId) showEndNotification(t);
+    }
+  });
+
+  if(changed){
+    markDirty();
+    if(state.currentView==="overzicht"||state.currentView==="dashboard") switchView(state.currentView);
+  }
+}
+
+function showEndNotification(t){
+  notifyTaskId=t.id;
+  const modal=$("notify-modal");
+  const msg=$("notify-message");
+  const endInput=$("notify-new-end");
+
+  msg.innerHTML=`<strong>${escHtml(t.title)}</strong> zou nu klaar moeten zijn.<br>
+    <span style="color:var(--text-tertiary);font-size:13px">${t.location?escHtml(t.location)+" · ":""}Eindtijd: ${fmtDateTime(t.scheduled.end)}</span>`;
+
+  const later=new Date(Date.now()+36e5);
+  const p=n=>String(n).padStart(2,"0");
+  endInput.value=`${later.getFullYear()}-${p(later.getMonth()+1)}-${p(later.getDate())}T${p(later.getHours())}:${p(later.getMinutes())}`;
+
+  modal.classList.remove("hidden");
+  showBrowserNotif(`⏰ "${t.title}" — eindtijd bereikt`,"Afronden of verlengen?");
+}
+
+function closeNotifyModal(){
+  $("notify-modal")?.classList.add("hidden");
+  notifyTaskId=null;
+  // Check if there are more tasks waiting for notification
+  setTimeout(()=>{ if(!notifyTaskId) runScheduler(); }, 500);
+}
+
+function wireNotifyModal(){
+  // Click overlay to snooze
+  $("notify-modal")?.addEventListener("click",(e)=>{
+    if(e.target.id==="notify-modal"){
+      if(notifyTaskId) snoozedEnds.add(notifyTaskId);
+      closeNotifyModal();
+    }
+  });
+
+  $("notify-done")?.addEventListener("click",()=>{
+    const t=state.tasks.find(x=>x.id===notifyTaskId);
+    if(t){
+      t.status="Afgerond";
+      markDirty();
+      toast(`"${t.title}" afgerond ✓`);
+      if(state.currentView==="overzicht"||state.currentView==="dashboard") switchView(state.currentView);
+    }
+    closeNotifyModal();
+  });
+
+  $("notify-extend")?.addEventListener("click",()=>{
+    const t=state.tasks.find(x=>x.id===notifyTaskId);
+    const newEnd=$("notify-new-end")?.value;
+    if(t&&newEnd){
+      t.scheduled.end=newEnd;
+      snoozedEnds.delete(t.id);
+      markDirty();
+      toast(`"${t.title}" verlengd tot ${fmtDateTime(newEnd)}`);
+      if(state.currentView==="overzicht"||state.currentView==="dashboard") switchView(state.currentView);
+    }
+    closeNotifyModal();
+  });
+
+  $("notify-snooze")?.addEventListener("click",()=>{
+    if(notifyTaskId){
+      snoozedEnds.add(notifyTaskId);
+      const tid=notifyTaskId;
+      setTimeout(()=>snoozedEnds.delete(tid), 15*60*1000);
+      toast("Herinnering over 15 minuten");
+    }
+    closeNotifyModal();
+  });
+
+  $("notify-close")?.addEventListener("click",()=>{
+    if(notifyTaskId) snoozedEnds.add(notifyTaskId);
+    closeNotifyModal();
+  });
+}
+
+function requestNotifPermission(){
+  if("Notification" in window && Notification.permission==="default"){
+    Notification.requestPermission();
+  }
+}
+
+function showBrowserNotif(title,body){
+  if("Notification" in window && Notification.permission==="granted"){
+    try { new Notification(title,{body,icon:"data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏠</text></svg>"}); } catch(e){}
+  }
+}
+
 function startApp(){
   state.tasks.forEach(t=>ensureSchedule(t));
   if(!state.groups||!state.groups.length) state.groups=[...DEFAULT_GROUPS];
@@ -2103,7 +2229,10 @@ function startApp(){
 
   updateSidebarUser();
   wireUI();
+  wireNotifyModal();
+  requestNotifPermission();
   switchView("dashboard");
+  startScheduler();
 }
 
 // ═══════════════════════════════════════════════════════════
