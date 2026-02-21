@@ -111,16 +111,19 @@
   },
   {
     "id": "TASK-004",
-    "project": "",
+    "project": "Wielsterdyk",
     "group": "Binnen",
-    "location": "",
+    "location": "Badkamer",
     "type": "",
     "category": "",
-    "title": "Nieuwe klus",
+    "title": "Materialen badkamer",
     "priority": "",
     "status": "Backlog",
     "owner": "",
-    "assignees": [],
+    "assignees": [
+      "martje",
+      "justin"
+    ],
     "estimate_hours": {
       "optimistic": 0,
       "realistic": 0,
@@ -318,6 +321,72 @@
       "timeblock": "",
       "start": "2026-08-10T08:00",
       "end": "2026-09-04T17:00"
+    },
+    "dependencies": [],
+    "definition_of_done": "",
+    "materials": [],
+    "tools": [],
+    "steps": [],
+    "notes": "",
+    "inCalendar": true
+  },
+  {
+    "id": "TASK-010",
+    "project": "Wielsterdyk",
+    "group": "Binnen",
+    "location": "",
+    "type": "",
+    "category": "",
+    "title": "Afspraak maken Rene",
+    "priority": "",
+    "status": "Backlog",
+    "owner": "",
+    "assignees": [
+      "justin"
+    ],
+    "estimate_hours": {
+      "optimistic": 0,
+      "realistic": 0,
+      "worst": 0
+    },
+    "actual_hours": 0,
+    "scheduled": {
+      "date": "",
+      "timeblock": "",
+      "start": "",
+      "end": ""
+    },
+    "dependencies": [],
+    "definition_of_done": "",
+    "materials": [],
+    "tools": [],
+    "steps": [],
+    "notes": "",
+    "inCalendar": true
+  },
+  {
+    "id": "TASK-011",
+    "project": "",
+    "group": "Binnen",
+    "location": "",
+    "type": "",
+    "category": "",
+    "title": "Vergunning dakkapel",
+    "priority": "",
+    "status": "Backlog",
+    "owner": "",
+    "assignees": [],
+    "estimate_hours": {
+      "optimistic": 0,
+      "realistic": 0,
+      "worst": 0
+    },
+    "actual_hours": 0,
+    "scheduled": {
+      "date": "",
+      "timeblock": "",
+      "start": "",
+      "end": ""
     },
     "dependencies": [],
     "definition_of_done": "",
