@@ -741,5 +741,39 @@
     "inCalendar": true,
     "subtasks": [],
     "allDay": false
+  },
+  {
+    "id": "TASK-021",
+    "project": "",
+    "group": "Binnen",
+    "location": "",
+    "type": "",
+    "category": "",
+    "title": "Stukken aanleveren Van Wieren",
+    "priority": "",
+    "status": "Backlog",
+    "owner": "",
+    "assignees": [],
+    "estimate_hours": {
+      "optimistic": 0,
+      "realistic": 0,
+      "worst": 0
+    },
+    "actual_hours": 0,
+    "scheduled": {
+      "date": "",
+      "timeblock": "",
+      "start": "",
+      "end": ""
+    },
+    "dependencies": [],
+    "definition_of_done": "",
+    "materials": [],
+    "tools": [],
+    "steps": [],
+    "subtasks": [],
+    "notes": "",
+    "inCalendar": true,
+    "allDay": false
   }
 ]
