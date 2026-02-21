@@ -45,6 +45,7 @@ let state = {
   selectedTaskId: null,
   currentView: "dashboard",
   currentUser: null,
+  ganttCollapsed: new Set(),  // group IDs that are collapsed in Gantt
   overzicht: {
     mode: "list",
     agendaZoom: "month",
@@ -640,13 +641,13 @@ function renderListView(container){
 
 // ─── GANTT VIEW ───────────────────────────────────────────
 function renderGanttView(container){
-  const filtered=getFilteredTasks().filter(t=>t.scheduled?.start).map(t=>{
-    // Ensure end exists for display
+  const allFiltered=getFilteredTasks().filter(t=>t.scheduled?.start).map(t=>{
     if(!t.scheduled.end) ensureSchedule(t);
     return t;
   });
   const fd=new Date(state.overzicht.focusDate+"T00:00:00");
 
+  // Timeline range
   let rangeStart, rangeEnd, cols, colLabels;
   if(state.overzicht.ganttZoom==="week"){
     rangeStart=startOfWeek(fd);
@@ -667,58 +668,132 @@ function renderGanttView(container){
     });
   }
 
-  const items=filtered.filter(t=>{
+  // Filter tasks visible in this range
+  const inRange=allFiltered.filter(t=>{
     const s=new Date(t.scheduled.start);
     const e=t.scheduled.end?new Date(t.scheduled.end):new Date(s.getTime()+36e5);
     return e>rangeStart&&s<rangeEnd;
   }).sort((a,b)=>(a.scheduled.start||"").localeCompare(b.scheduled.start||""));
 
-  if(!items.length){
-    container.innerHTML=`<div class="empty-state" style="background:var(--surface);border-radius:var(--radius-lg);border:1px solid var(--border)"><p>Geen ingeplande klussen in deze periode.</p></div>`;
-    return;
-  }
+  // Group tasks by group name — include ALL groups from state even if empty
+  const grouped=new Map();
+  state.groups.forEach(g=>grouped.set(g.name,[]));
+  // Also catch tasks with groups not in state.groups
+  inRange.forEach(t=>{
+    const gn=t.group||"Geen groep";
+    if(!grouped.has(gn)) grouped.set(gn,[]);
+    grouped.get(gn).push(t);
+  });
+  // Ensure "Geen groep" exists if there are ungrouped tasks
+  if(!grouped.has("Geen groep")) grouped.set("Geen groep",[]);
 
   const labelW=280;
   const colW=state.overzicht.ganttZoom==="week"?100:36;
   const gc=h("div",{class:"gantt-container"});
   const grid=h("div",{class:"gantt-grid",style:{gridTemplateColumns:`${labelW}px repeat(${cols},${colW}px)`}});
 
-  // Header
+  // Header row
   grid.appendChild(h("div",{class:"gantt-hcell",style:{position:"sticky",left:"0",zIndex:"4",minWidth:labelW+"px"}},"Klus"));
   colLabels.forEach(l=>grid.appendChild(h("div",{class:"gantt-hcell"},l)));
 
-  // Rows
-  items.forEach(t=>{
-    const exec=[getPersonName((t.assignees||[])[0]),getPersonName((t.assignees||[])[1])].filter(x=>x!=="–").join(" + ")||"–";
-    grid.appendChild(h("div",{class:"gantt-label-cell"},[
-      h("div",{class:"gantt-label-title"},t.title),
-      h("div",{class:"gantt-label-meta"},`${t.group||"–"} · ${t.location||"–"} · ${exec}`)
-    ]));
+  let hasVisibleRows=false;
 
-    const track=h("div",{style:{gridColumn:`span ${cols}`,position:"relative",height:"52px",borderBottom:"1px solid var(--border)"}});
+  // Render groups
+  grouped.forEach((tasks,groupName)=>{
+    // Skip "Geen groep" if empty
+    if(groupName==="Geen groep"&&tasks.length===0) return;
 
-    const s=new Date(t.scheduled.start);
-    const e=t.scheduled.end?new Date(t.scheduled.end):new Date(s.getTime()+36e5);
-    let startIdx,endIdx;
-    if(state.overzicht.ganttZoom==="week"){
-      startIdx=Math.max(0,(s-rangeStart)/864e5);
-      endIdx=Math.min(cols,(e-rangeStart)/864e5);
-    } else {
-      startIdx=Math.max(0,(s.setHours(0,0,0,0),new Date(s)-rangeStart)/864e5);
-      endIdx=Math.min(cols,Math.ceil((e-rangeStart)/864e5));
+    const groupObj=state.groups.find(g=>g.name===groupName);
+    const color=groupObj?.color||"#78716C";
+    const isCollapsed=state.ganttCollapsed.has(groupName);
+    const taskCountInRange=tasks.length;
+
+    // Group header row
+    const headerLabel=document.createElement("div");
+    headerLabel.className="gantt-group-header";
+    headerLabel.style.cssText=`position:sticky;left:0;z-index:3;min-width:${labelW}px;`;
+    headerLabel.innerHTML=`
+      <span class="gantt-group-toggle">${isCollapsed?"▶":"▼"}</span>
+      <span class="gantt-group-dot" style="background:${color}"></span>
+      <span class="gantt-group-name">${escHtml(groupName)}</span>
+      <span class="gantt-group-count">${taskCountInRange}</span>
+    `;
+    headerLabel.addEventListener("click",()=>{
+      if(state.ganttCollapsed.has(groupName)) state.ganttCollapsed.delete(groupName);
+      else state.ganttCollapsed.add(groupName);
+      renderGanttView(container);
+    });
+    grid.appendChild(headerLabel);
+
+    // Group header track (empty spanning bar area)
+    const headerTrack=document.createElement("div");
+    headerTrack.className="gantt-group-header-track";
+    headerTrack.style.gridColumn=`span ${cols}`;
+    grid.appendChild(headerTrack);
+
+    hasVisibleRows=true;
+
+    // Task rows (only if expanded)
+    if(!isCollapsed){
+      if(tasks.length===0){
+        // Empty group hint
+        const emptyLabel=document.createElement("div");
+        emptyLabel.className="gantt-label-cell gantt-task-indent";
+        emptyLabel.innerHTML=`<div class="gantt-label-meta" style="font-style:italic">Geen klussen in deze periode</div>`;
+        grid.appendChild(emptyLabel);
+        const emptyTrack=document.createElement("div");
+        emptyTrack.style.cssText=`grid-column:span ${cols};height:36px;border-bottom:1px solid var(--border);`;
+        grid.appendChild(emptyTrack);
+      } else {
+        tasks.forEach(t=>{
+          const exec=[getPersonName((t.assignees||[])[0]),getPersonName((t.assignees||[])[1])].filter(x=>x!=="–").join(" + ")||"–";
+
+          const labelCell=document.createElement("div");
+          labelCell.className="gantt-label-cell gantt-task-indent";
+          labelCell.innerHTML=`
+            <div class="gantt-label-title">${escHtml(t.title)}</div>
+            <div class="gantt-label-meta">${escHtml(t.location||"–")} · ${escHtml(exec)}</div>
+          `;
+          grid.appendChild(labelCell);
+
+          const track=document.createElement("div");
+          track.style.cssText=`grid-column:span ${cols};position:relative;height:52px;border-bottom:1px solid var(--border);`;
+
+          const s=new Date(t.scheduled.start);
+          const e=t.scheduled.end?new Date(t.scheduled.end):new Date(s.getTime()+36e5);
+          let startIdx,endIdx;
+          if(state.overzicht.ganttZoom==="week"){
+            startIdx=Math.max(0,(s-rangeStart)/864e5);
+            endIdx=Math.min(cols,(e-rangeStart)/864e5);
+          } else {
+            startIdx=Math.max(0,(new Date(s.getFullYear(),s.getMonth(),s.getDate())-rangeStart)/864e5);
+            endIdx=Math.min(cols,Math.ceil((e-rangeStart)/864e5));
+          }
+          if(endIdx<=startIdx) endIdx=startIdx+0.5;
+
+          const left=startIdx*colW+4;
+          const width=Math.max(24,(endIdx-startIdx)*colW-8);
+          const sc=statusClass(t.status);
+
+          const bar=document.createElement("div");
+          bar.className=`gantt-bar ${sc}`;
+          bar.style.cssText=`left:${left}px;width:${width}px;`;
+          bar.textContent=t.title;
+          bar.addEventListener("click",()=>openTaskModal(t.id));
+          track.appendChild(bar);
+          grid.appendChild(track);
+        });
+      }
     }
-    if(endIdx<=startIdx) endIdx=startIdx+0.5;
-
-    const left=startIdx*colW+4;
-    const width=Math.max(24,(endIdx-startIdx)*colW-8);
-    const sc=statusClass(t.status);
-
-    const bar=h("div",{class:`gantt-bar ${sc}`,style:{left:left+"px",width:width+"px"},onclick:()=>openTaskModal(t.id)},t.title);
-    track.appendChild(bar);
-    grid.appendChild(track);
   });
 
+  if(!hasVisibleRows){
+    container.innerHTML=`<div class="empty-state" style="background:var(--surface);border-radius:var(--radius-lg);border:1px solid var(--border)"><p>Geen groepen of klussen gevonden.</p></div>`;
+    return;
+  }
+
   gc.appendChild(grid);
+  container.innerHTML="";
   container.appendChild(gc);
 }
 
