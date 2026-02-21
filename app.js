@@ -19,6 +19,7 @@ const USERS = [
 const DEFAULT_STATUSES   = ["Backlog","Ingepland","Bezig","Wacht op materiaal","Wacht op hulp/afspraak","Afgerond"];
 const DEFAULT_LOCATIONS  = ["Woonkamer","Keuken","Badkamer","Slaapkamer","Tuin","Schuur","Zolder","Hal","Garage","Overloop"];
 const DEFAULT_CATEGORIES = ["Schilderwerk","Timmerwerk","Elektra","Loodgieter","Schoonmaak","Verhuizen","Reparatie","Installatie"];
+const DEFAULT_PROJECTS   = [];
 
 const GROUP_COLORS  = [
   "#5B8A72","#6B8FBF","#C5952E","#9B6FB5","#DC6B3F",
@@ -42,6 +43,7 @@ let state = {
   statuses: [...DEFAULT_STATUSES],
   locations: [...DEFAULT_LOCATIONS],
   categories: [...DEFAULT_CATEGORIES],
+  projects: [...DEFAULT_PROJECTS],
   selectedTaskId: null,
   currentView: "dashboard",
   currentUser: null,
@@ -267,6 +269,7 @@ async function syncFromGitHub(silent){
       if(c.statuses?.length) state.statuses=c.statuses;
       if(c.locations?.length) state.locations=c.locations;
       if(c.categories?.length) state.categories=c.categories;
+      if(c.projects) state.projects=c.projects;
       configSha=cd.sha;
     }
 
@@ -294,7 +297,7 @@ async function syncToGitHub(){
 
     const cfg={
       groups:state.groups, statuses:state.statuses,
-      locations:state.locations, categories:state.categories
+      locations:state.locations, categories:state.categories, projects:state.projects
     };
 
     // Write one at a time — parallel commits cause 409 conflicts
@@ -331,7 +334,7 @@ function updateSyncIndicator(status){
 function saveLocal(){
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify({
     tasks:state.tasks, people:state.people, groups:state.groups,
-    statuses:state.statuses, locations:state.locations, categories:state.categories
+    statuses:state.statuses, locations:state.locations, categories:state.categories, projects:state.projects
   })); } catch(e){}
 }
 function loadLocal(){
@@ -356,7 +359,7 @@ function loadSession(){
 function takeSnapshot(){
   cleanSnapshot=JSON.stringify({
     tasks:state.tasks, people:state.people, groups:state.groups,
-    statuses:state.statuses, locations:state.locations, categories:state.categories
+    statuses:state.statuses, locations:state.locations, categories:state.categories, projects:state.projects
   });
 }
 
@@ -398,6 +401,7 @@ function discardChanges(){
     state.statuses=snap.statuses||[...DEFAULT_STATUSES];
     state.locations=snap.locations||[...DEFAULT_LOCATIONS];
     state.categories=snap.categories||[...DEFAULT_CATEGORIES];
+    state.projects=snap.projects||[...DEFAULT_PROJECTS];
     state.tasks.forEach(t=>ensureSchedule(t));
   } catch(e){ return; }
 
@@ -574,7 +578,7 @@ function populateFilters(){
   const projSel=$("filter-project");
   const prval=projSel.value;
   projSel.innerHTML='<option value="">Alle projecten</option>';
-  const projects=[...new Set(state.tasks.map(t=>t.project).filter(Boolean))].sort();
+  const projects=[...new Set([...state.projects, ...state.tasks.map(t=>t.project).filter(Boolean)])].sort();
   projects.forEach(p=>projSel.appendChild(h("option",{value:p},p)));
   projSel.value=prval;
 }
@@ -1123,6 +1127,7 @@ function renderSettings(){
   renderSimpleListManager("mgr-locations", state.locations, "locations");
   renderSimpleListManager("mgr-categories", state.categories, "categories");
   renderSimpleListManager("mgr-statuses", state.statuses, "statuses");
+  renderSimpleListManager("mgr-projects", state.projects, "projects");
 }
 
 function updateGHSettingsUI(){
@@ -1371,7 +1376,7 @@ function renderSimpleListManager(containerId, list, stateKey){
       if(!newVal){ label.textContent=item; return; }
       if(newVal!==item){
         // Update tasks that reference old value
-        const field=stateKey==="locations"?"location":stateKey==="categories"?"category":stateKey==="statuses"?"status":null;
+        const field=stateKey==="locations"?"location":stateKey==="categories"?"category":stateKey==="statuses"?"status":stateKey==="projects"?"project":null;
         if(field){
           state.tasks.forEach(t=>{ if(t[field]===item) t[field]=newVal; });
         }
@@ -1434,7 +1439,7 @@ function openTaskModal(taskId){
   exec2.value=(t.assignees||[])[1]||"";
 
   // Populate datalists from state lists
-  populateDatalist("dl-projects", [...new Set(state.tasks.map(t=>t.project).filter(Boolean))]);
+  populateDatalist("dl-projects", [...new Set([...state.projects, ...state.tasks.map(t=>t.project).filter(Boolean)])]);
   populateDatalist("dl-groups", state.groups.map(g=>g.name));
   populateDatalist("dl-locations", state.locations);
   populateDatalist("dl-categories", state.categories);
@@ -1529,6 +1534,9 @@ function saveTask(){
   }
   if(t.category&&!state.categories.includes(t.category)){
     state.categories.push(t.category);
+  }
+  if(t.project&&!state.projects.includes(t.project)){
+    state.projects.push(t.project);
   }
 
   // Ensure end date exists when start is set
@@ -1711,7 +1719,7 @@ function exportJSON(){
   const payload={
     exported_at:new Date().toISOString(),
     tasks:state.tasks, people:state.people, groups:state.groups,
-    statuses:state.statuses, locations:state.locations, categories:state.categories
+    statuses:state.statuses, locations:state.locations, categories:state.categories, projects:state.projects
   };
   const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
   const a=document.createElement("a");
@@ -1735,6 +1743,7 @@ async function importJSON(){
     if(obj.statuses) state.statuses=obj.statuses;
     if(obj.locations) state.locations=obj.locations;
     if(obj.categories) state.categories=obj.categories;
+    if(obj.projects) state.projects=obj.projects;
     state.tasks.forEach(t=>ensureSchedule(t));
     await commitChanges();
     toast("Import klaar ✓");
@@ -1897,6 +1906,7 @@ function wireUI(){
   wireAddButton("btn-add-location","new-location-name","locations",()=>renderSimpleListManager("mgr-locations",state.locations,"locations"));
   wireAddButton("btn-add-category","new-category-name","categories",()=>renderSimpleListManager("mgr-categories",state.categories,"categories"));
   wireAddButton("btn-add-status","new-status-name","statuses",()=>renderSimpleListManager("mgr-statuses",state.statuses,"statuses"));
+  wireAddButton("btn-add-project","new-project-name","projects",()=>renderSimpleListManager("mgr-projects",state.projects,"projects"));
 
   // Danger zone
   $("btn-clear-all")?.addEventListener("click",()=>{
@@ -1918,11 +1928,12 @@ function wireUI(){
   });
 
   $("btn-reset-lists")?.addEventListener("click",()=>{
-    if(!confirm("Alle lijsten (groepen, locaties, statussen, categorieën) terugzetten naar standaard?")) return;
+    if(!confirm("Alle lijsten (groepen, projecten, locaties, statussen, categorieën) terugzetten naar standaard?")) return;
     state.groups=[...DEFAULT_GROUPS];
     state.statuses=[...DEFAULT_STATUSES];
     state.locations=[...DEFAULT_LOCATIONS];
     state.categories=[...DEFAULT_CATEGORIES];
+    state.projects=[...DEFAULT_PROJECTS];
     markDirty();
     renderSettings();
     toast("Lijsten teruggezet ✓");
@@ -1983,6 +1994,7 @@ async function loadDefaults(){
     state.statuses=[...DEFAULT_STATUSES];
     state.locations=[...DEFAULT_LOCATIONS];
     state.categories=[...DEFAULT_CATEGORIES];
+    state.projects=[...DEFAULT_PROJECTS];
     state.tasks.forEach(t=>ensureSchedule(t));
     saveLocal();
   } catch(e){ console.warn("Could not load defaults:",e); }
@@ -2056,6 +2068,7 @@ function loadLocalData(){
     state.statuses=local.statuses||[...DEFAULT_STATUSES];
     state.locations=local.locations||[...DEFAULT_LOCATIONS];
     state.categories=local.categories||[...DEFAULT_CATEGORIES];
+    state.projects=local.projects||[...DEFAULT_PROJECTS];
   }
 }
 
@@ -2073,6 +2086,7 @@ function startApp(){
   if(!state.statuses||!state.statuses.length) state.statuses=[...DEFAULT_STATUSES];
   if(!state.locations||!state.locations.length) state.locations=[...DEFAULT_LOCATIONS];
   if(!state.categories||!state.categories.length) state.categories=[...DEFAULT_CATEGORIES];
+  if(!state.projects) state.projects=[...DEFAULT_PROJECTS];
 
   takeSnapshot();
 

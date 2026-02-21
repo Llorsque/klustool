@@ -285,6 +285,15 @@
             </div>
           </div>
           <div class="panel">
+            <h3>Projecten</h3>
+            <p class="panel-desc">Beheer projecten (bijv. Oud huis, Nieuw huis).</p>
+            <div id="mgr-projects"></div>
+            <div class="settings-actions" style="margin-top:8px">
+              <input id="new-project-name" type="text" placeholder="Nieuw project..." class="input-inline" />
+              <button class="btn secondary" id="btn-add-project">+ Toevoegen</button>
+            </div>
+          </div>
+          <div class="panel">
             <h3>Locaties</h3>
             <p class="panel-desc">Beheer locaties die je kunt kiezen bij een klus.</p>
             <div id="mgr-locations"></div>
@@ -350,7 +359,7 @@
             <input id="f-title" type="text" placeholder="Beschrijf de klus..." />
           </div>
           <div class="form-field">
-            <label>Project</label>
+            <label>Project <span class="label-hint">(kies of typ nieuw)</span></label>
             <input id="f-project" type="text" placeholder="Oud huis, Nieuw huis..." list="dl-projects" />
             <datalist id="dl-projects"></datalist>
           </div>
