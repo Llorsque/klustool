@@ -378,10 +378,56 @@
     "definition_of_done": "",
     "materials": [],
     "tools": [],
-    "steps": [],
+    "steps": [
+      "Sloopplanning",
+      "Dakkapel vergunning",
+      "Dakkapel tekening",
+      "Installatiewerk"
+    ],
     "notes": "",
     "inCalendar": true,
-    "subtasks": [],
+    "subtasks": [
+      {
+        "id": "st-adp03o",
+        "title": "Sloopplanning",
+        "status": "todo",
+        "scheduled": {
+          "start": "",
+          "end": ""
+        },
+        "inCalendar": true
+      },
+      {
+        "id": "st-ratitq",
+        "title": "Dakkapel vergunning",
+        "status": "todo",
+        "scheduled": {
+          "start": "",
+          "end": ""
+        },
+        "inCalendar": true
+      },
+      {
+        "id": "st-t17ovv",
+        "title": "Dakkapel tekening",
+        "status": "todo",
+        "scheduled": {
+          "start": "",
+          "end": ""
+        },
+        "inCalendar": true
+      },
+      {
+        "id": "st-4sc031",
+        "title": "Installatiewerk",
+        "status": "todo",
+        "scheduled": {
+          "start": "",
+          "end": ""
+        },
+        "inCalendar": true
+      }
+    ],
     "allDay": false
   },
   {
