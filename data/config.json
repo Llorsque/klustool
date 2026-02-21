@@ -60,5 +60,9 @@
     "Verhuizen",
     "Reparatie",
     "Installatie"
+  ],
+  "projects": [
+    "Mesdagstraat",
+    "Wielsterdyk"
   ]
 }
