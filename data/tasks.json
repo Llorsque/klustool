@@ -10,7 +10,9 @@
     "priority": "",
     "status": "Ingepland",
     "owner": "",
-    "assignees": [],
+    "assignees": [
+      "justin"
+    ],
     "estimate_hours": {
       "optimistic": 0,
       "realistic": 0,
