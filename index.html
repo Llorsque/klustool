@@ -263,24 +263,55 @@
           </div>
           <div class="panel">
             <h3>iCal Agenda Sync</h3>
-            <p class="panel-desc">Download een .ics bestand om in Apple Agenda (of andere) te importeren. Alle ingeplande klussen komen als afspraken in je agenda.</p>
+            <p class="panel-desc">Download een .ics bestand voor Apple Agenda.</p>
             <div class="settings-actions">
               <button class="btn primary" id="btn-ical">Download .ics</button>
             </div>
           </div>
           <div class="panel">
-            <h3>Groepen beheren</h3>
-            <p class="panel-desc">Voeg nieuwe groepen toe of pas kleuren aan.</p>
-            <div id="groups-manager"></div>
-            <div class="settings-actions" style="margin-top:12px">
-              <input id="new-group-name" type="text" placeholder="Nieuwe groep naam..." class="input-inline" />
-              <button class="btn secondary" id="btn-add-group">+ Groep</button>
+            <h3>Groepen</h3>
+            <p class="panel-desc">Beheer groepen met kleuren. Klik op de kleur om deze te wijzigen.</p>
+            <div id="mgr-groups"></div>
+            <div class="settings-actions" style="margin-top:8px">
+              <input id="new-group-name" type="text" placeholder="Nieuwe groep..." class="input-inline" />
+              <button class="btn secondary" id="btn-add-group">+ Toevoegen</button>
+            </div>
+          </div>
+          <div class="panel">
+            <h3>Locaties</h3>
+            <p class="panel-desc">Beheer locaties die je kunt kiezen bij een klus.</p>
+            <div id="mgr-locations"></div>
+            <div class="settings-actions" style="margin-top:8px">
+              <input id="new-location-name" type="text" placeholder="Nieuwe locatie..." class="input-inline" />
+              <button class="btn secondary" id="btn-add-location">+ Toevoegen</button>
+            </div>
+          </div>
+          <div class="panel">
+            <h3>Categorieën</h3>
+            <p class="panel-desc">Beheer categorieën (type werkzaamheden).</p>
+            <div id="mgr-categories"></div>
+            <div class="settings-actions" style="margin-top:8px">
+              <input id="new-category-name" type="text" placeholder="Nieuwe categorie..." class="input-inline" />
+              <button class="btn secondary" id="btn-add-category">+ Toevoegen</button>
+            </div>
+          </div>
+          <div class="panel">
+            <h3>Statussen</h3>
+            <p class="panel-desc">Beheer de mogelijke statussen voor klussen.</p>
+            <div id="mgr-statuses"></div>
+            <div class="settings-actions" style="margin-top:8px">
+              <input id="new-status-name" type="text" placeholder="Nieuwe status..." class="input-inline" />
+              <button class="btn secondary" id="btn-add-status">+ Toevoegen</button>
             </div>
           </div>
           <div class="panel danger-zone">
             <h3>Danger zone</h3>
-            <p class="panel-desc">Reset alle data naar de oorspronkelijke standaardwaarden.</p>
-            <button class="btn danger" id="btn-reset">Reset naar defaults</button>
+            <p class="panel-desc">Reset of wis data.</p>
+            <div class="settings-actions" style="flex-direction:column;align-items:flex-start;gap:8px">
+              <button class="btn danger" id="btn-clear-all">Alle klussen & personen wissen</button>
+              <button class="btn danger" id="btn-clear-local">Lokale cache wissen (fix sync problemen)</button>
+              <button class="btn secondary" id="btn-reset-lists">Lijsten terugzetten naar standaard</button>
+            </div>
           </div>
         </div>
       </section>
@@ -313,22 +344,23 @@
           </div>
           <div class="form-field">
             <label>Project</label>
-            <input id="f-project" type="text" placeholder="Oud huis, Nieuw huis..." list="project-suggestions" />
-            <datalist id="project-suggestions"></datalist>
+            <input id="f-project" type="text" placeholder="Oud huis, Nieuw huis..." list="dl-projects" />
+            <datalist id="dl-projects"></datalist>
           </div>
           <div class="form-field">
-            <label>Groep</label>
-            <select id="f-group"></select>
+            <label>Groep <span class="label-hint">(kies of typ nieuw)</span></label>
+            <input id="f-group" type="text" placeholder="Kies of typ..." list="dl-groups" />
+            <datalist id="dl-groups"></datalist>
           </div>
           <div class="form-field">
-            <label>Locatie</label>
-            <input id="f-location" type="text" placeholder="Keuken, Badkamer..." list="location-suggestions" />
-            <datalist id="location-suggestions"></datalist>
+            <label>Locatie <span class="label-hint">(kies of typ nieuw)</span></label>
+            <input id="f-location" type="text" placeholder="Keuken, Badkamer..." list="dl-locations" />
+            <datalist id="dl-locations"></datalist>
           </div>
           <div class="form-field">
-            <label>Categorie</label>
-            <input id="f-category" type="text" placeholder="Schilderwerk, Reparatie..." list="category-suggestions" />
-            <datalist id="category-suggestions"></datalist>
+            <label>Categorie <span class="label-hint">(kies of typ nieuw)</span></label>
+            <input id="f-category" type="text" placeholder="Schilderwerk, Reparatie..." list="dl-categories" />
+            <datalist id="dl-categories"></datalist>
           </div>
           <div class="form-field">
             <label>Status</label>

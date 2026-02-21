@@ -978,8 +978,9 @@ a:hover { text-decoration: underline; }
 .settings-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 20px;
+  gap: 16px;
 }
+.settings-grid .panel.full-width { grid-column: 1 / -1; }
 .settings-actions {
   display: flex;
   gap: 10px;

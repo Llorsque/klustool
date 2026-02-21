@@ -8,13 +8,17 @@
 const STORAGE_KEY   = "klusplanner_v2";
 const CONFIG_KEY    = "klusplanner_gh";
 const SESSION_KEY   = "klusplanner_session";
-const STATUSES      = ["Backlog","Ingepland","Bezig","Wacht op materiaal","Wacht op hulp/afspraak","Afgerond"];
 
 // ─── User accounts (hardcoded) ─────────────────────────────
 const USERS = [
   { username: "Martje",  password: "Benja01!",  displayName: "Martje",  avatar: "M" },
   { username: "Justin",  password: "Teun01!",   displayName: "Justin",  avatar: "J" }
 ];
+
+// ─── Default taxonomy lists (editable by user) ─────────────
+const DEFAULT_STATUSES   = ["Backlog","Ingepland","Bezig","Wacht op materiaal","Wacht op hulp/afspraak","Afgerond"];
+const DEFAULT_LOCATIONS  = ["Woonkamer","Keuken","Badkamer","Slaapkamer","Tuin","Schuur","Zolder","Hal","Garage","Overloop"];
+const DEFAULT_CATEGORIES = ["Schilderwerk","Timmerwerk","Elektra","Loodgieter","Schoonmaak","Verhuizen","Reparatie","Installatie"];
 
 const GROUP_COLORS  = [
   "#5B8A72","#6B8FBF","#C5952E","#9B6FB5","#DC6B3F",
@@ -35,12 +39,15 @@ let state = {
   tasks: [],
   people: [],
   groups: [...DEFAULT_GROUPS],
+  statuses: [...DEFAULT_STATUSES],
+  locations: [...DEFAULT_LOCATIONS],
+  categories: [...DEFAULT_CATEGORIES],
   selectedTaskId: null,
   currentView: "dashboard",
-  currentUser: null,  // { username, displayName, avatar }
+  currentUser: null,
   overzicht: {
-    mode: "list",       // list | gantt | agenda
-    agendaZoom: "month",// month | week | day
+    mode: "list",
+    agendaZoom: "month",
     ganttZoom: "month",
     focusDate: todayYmd()
   }
@@ -50,7 +57,7 @@ let githubConfig = null;  // { token, owner, repo }
 let isOnline     = false;
 let tasksSha     = null;
 let peopleSha    = null;
-let groupsSha    = null;
+let configSha    = null;  // data/config.json (groups, statuses, locations, categories)
 
 // ─── Dirty state (unsaved changes) ───────────────────────
 let isDirty      = false;
@@ -218,12 +225,19 @@ async function syncFromGitHub(){
       ghRead("data/tasks.json").catch(()=>null),
       ghRead("data/people.json").catch(()=>null)
     ]);
-    let groupsData=null;
-    try { groupsData=await ghRead("data/groups.json"); } catch(e){}
+    let configData=null;
+    try { configData=await ghRead("data/config.json"); } catch(e){}
 
     if(tasksData){ state.tasks=tasksData.content; tasksSha=tasksData.sha; }
     if(peopleData){ state.people=peopleData.content; peopleSha=peopleData.sha; }
-    if(groupsData){ state.groups=groupsData.content; groupsSha=groupsData.sha; }
+    if(configData){
+      const cfg=configData.content;
+      if(cfg.groups) state.groups=cfg.groups;
+      if(cfg.statuses) state.statuses=cfg.statuses;
+      if(cfg.locations) state.locations=cfg.locations;
+      if(cfg.categories) state.categories=cfg.categories;
+      configSha=configData.sha;
+    }
 
     state.tasks.forEach(t=>ensureSchedule(t));
     saveLocal();
@@ -253,11 +267,15 @@ async function syncToGitHub(){
         if(tf) tasksSha=tf.sha;
         if(pf) peopleSha=pf.sha;
       } catch(e){}
-      // Also try groups
-      if(!groupsSha){
-        try { const gf=await ghFetch("data/groups.json"); groupsSha=gf.sha; } catch(e){}
+      if(!configSha){
+        try { const cf=await ghFetch("data/config.json"); configSha=cf.sha; } catch(e){}
       }
     }
+
+    const configPayload={
+      groups:state.groups, statuses:state.statuses,
+      locations:state.locations, categories:state.categories
+    };
 
     const [newTasksSha, newPeopleSha] = await Promise.all([
       ghWrite("data/tasks.json", state.tasks, tasksSha, "Update tasks"),
@@ -266,9 +284,8 @@ async function syncToGitHub(){
     tasksSha=newTasksSha;
     peopleSha=newPeopleSha;
 
-    // Also save groups
-    const newGroupsSha=await ghWrite("data/groups.json", state.groups, groupsSha, "Update groups").catch(()=>null);
-    if(newGroupsSha) groupsSha=newGroupsSha;
+    const newConfigSha=await ghWrite("data/config.json", configPayload, configSha, "Update config").catch(()=>null);
+    if(newConfigSha) configSha=newConfigSha;
 
     updateSyncIndicator("online");
     toast("Gesynchroniseerd ✓");
@@ -305,10 +322,13 @@ function updateSyncIndicator(status){
 
 // ─── Local storage ────────────────────────────────────────
 function saveLocal(){
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify({tasks:state.tasks,people:state.people,groups:state.groups})); } catch(e){}
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify({
+    tasks:state.tasks, people:state.people, groups:state.groups,
+    statuses:state.statuses, locations:state.locations, categories:state.categories
+  })); } catch(e){}
 }
 function loadLocal(){
-  try { const d=JSON.parse(localStorage.getItem(STORAGE_KEY)); if(d?.tasks) return d; } catch(e){} return null;
+  try { const d=JSON.parse(localStorage.getItem(STORAGE_KEY)); if(d) return d; } catch(e){} return null;
 }
 function saveGHConfig(){
   if(!githubConfig) { localStorage.removeItem(CONFIG_KEY); return; }
@@ -327,7 +347,10 @@ function loadSession(){
 
 // ─── Dirty state management ──────────────────────────────
 function takeSnapshot(){
-  cleanSnapshot=JSON.stringify({tasks:state.tasks,people:state.people,groups:state.groups});
+  cleanSnapshot=JSON.stringify({
+    tasks:state.tasks, people:state.people, groups:state.groups,
+    statuses:state.statuses, locations:state.locations, categories:state.categories
+  });
 }
 
 function markDirty(){
@@ -344,17 +367,13 @@ function markClean(){
 }
 
 async function commitChanges(){
-  // 1. Save locally (always instant)
   saveLocal();
-
-  // 2. Sync to GitHub if connected
   if(githubConfig){
     const ok=await syncToGitHub();
-    if(!ok) return; // toast already shown by syncToGitHub
+    if(!ok) return;
   } else {
     toast("Opgeslagen ✓");
   }
-
   markClean();
 }
 
@@ -365,6 +384,9 @@ function discardChanges(){
     state.tasks=snap.tasks||[];
     state.people=snap.people||[];
     state.groups=snap.groups||[...DEFAULT_GROUPS];
+    state.statuses=snap.statuses||[...DEFAULT_STATUSES];
+    state.locations=snap.locations||[...DEFAULT_LOCATIONS];
+    state.categories=snap.categories||[...DEFAULT_CATEGORIES];
     state.tasks.forEach(t=>ensureSchedule(t));
   } catch(e){ return; }
 
@@ -523,14 +545,13 @@ function populateFilters(){
   const statusSel=$("filter-status");
   const val=statusSel.value;
   statusSel.innerHTML='<option value="">Alle statussen</option>';
-  STATUSES.forEach(s=>statusSel.appendChild(h("option",{value:s},s)));
+  state.statuses.forEach(s=>statusSel.appendChild(h("option",{value:s},s)));
   statusSel.value=val;
 
   const groupSel=$("filter-group");
   const gval=groupSel.value;
   groupSel.innerHTML='<option value="">Alle groepen</option>';
-  const groups=[...new Set(state.tasks.map(t=>t.group).filter(Boolean))].sort();
-  groups.forEach(g=>groupSel.appendChild(h("option",{value:g},g)));
+  state.groups.forEach(g=>groupSel.appendChild(h("option",{value:g.name},g.name)));
   groupSel.value=gval;
 
   const personSel=$("filter-person");
@@ -571,7 +592,7 @@ function getFilteredTasks(){
 // ─── LIST VIEW ────────────────────────────────────────────
 function renderListView(container){
   const filtered=getFilteredTasks().sort((a,b)=>{
-    const si=STATUSES.indexOf(a.status)-STATUSES.indexOf(b.status);
+    const si=state.statuses.indexOf(a.status)-state.statuses.indexOf(b.status);
     if(si!==0) return si;
     const sa=a.scheduled?.start||"9999";
     const sb=b.scheduled?.start||"9999";
@@ -1007,8 +1028,11 @@ function renderPeople(){
 // SETTINGS
 // ═══════════════════════════════════════════════════════════
 function renderSettings(){
-  renderGroupsManager();
   updateGHSettingsUI();
+  renderGroupsManager();
+  renderSimpleListManager("mgr-locations", state.locations, "locations");
+  renderSimpleListManager("mgr-categories", state.categories, "categories");
+  renderSimpleListManager("mgr-statuses", state.statuses, "statuses");
 }
 
 function updateGHSettingsUI(){
@@ -1120,7 +1144,7 @@ function showGHSetupModal(){
 }
 
 function renderGroupsManager(){
-  const container=$("groups-manager");
+  const container=$("mgr-groups");
   if(!container) return;
   container.innerHTML="";
 
@@ -1214,6 +1238,67 @@ function renderGroupsManager(){
   container.appendChild(table);
 }
 
+// ─── Generic list manager (for simple string lists) ───────
+function renderSimpleListManager(containerId, list, stateKey){
+  const container=$(containerId);
+  if(!container) return;
+  container.innerHTML="";
+
+  if(!list.length){
+    container.innerHTML='<p style="color:var(--text-tertiary);font-size:13px;">Nog geen items.</p>';
+    return;
+  }
+
+  const wrap=document.createElement("div");
+  wrap.style.cssText="display:flex;flex-wrap:wrap;gap:6px;";
+
+  list.forEach((item,i)=>{
+    const chip=document.createElement("span");
+    chip.className="tag-chip";
+    chip.style.cssText="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:var(--radius-full);font-size:12px;font-weight:600;background:var(--bg-subtle);color:var(--text);border:1px solid var(--border);";
+
+    const label=document.createElement("span");
+    label.textContent=item;
+    label.contentEditable=true;
+    label.style.cssText="outline:none;min-width:20px;cursor:text;border-bottom:1px dashed transparent;";
+    label.addEventListener("focus",()=>{ label.style.borderBottomColor="var(--primary)"; });
+    label.addEventListener("blur",()=>{
+      label.style.borderBottomColor="transparent";
+      const newVal=label.textContent.trim();
+      if(!newVal){ label.textContent=item; return; }
+      if(newVal!==item){
+        // Update tasks that reference old value
+        const field=stateKey==="locations"?"location":stateKey==="categories"?"category":stateKey==="statuses"?"status":null;
+        if(field){
+          state.tasks.forEach(t=>{ if(t[field]===item) t[field]=newVal; });
+        }
+        state[stateKey][i]=newVal;
+        markDirty();
+      }
+    });
+    label.addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); label.blur(); } });
+
+    const del=document.createElement("span");
+    del.textContent="×";
+    del.style.cssText="cursor:pointer;opacity:.4;font-size:14px;line-height:1;";
+    del.addEventListener("mouseenter",()=>{ del.style.opacity="1"; });
+    del.addEventListener("mouseleave",()=>{ del.style.opacity=".4"; });
+    del.addEventListener("click",e=>{
+      e.stopPropagation();
+      if(!confirm(`"${item}" verwijderen uit de lijst?`)) return;
+      state[stateKey].splice(i,1);
+      markDirty();
+      renderSimpleListManager(containerId,state[stateKey],stateKey);
+    });
+
+    chip.appendChild(label);
+    chip.appendChild(del);
+    wrap.appendChild(chip);
+  });
+
+  container.appendChild(wrap);
+}
+
 // ═══════════════════════════════════════════════════════════
 // TASK MODAL
 // ═══════════════════════════════════════════════════════════
@@ -1226,21 +1311,15 @@ function openTaskModal(taskId){
   $("modal-title").textContent=t.title||"Klus bewerken";
   $("task-modal").classList.remove("hidden");
 
-  // Populate status
+  // Populate status select
   const stSel=$("f-status");
   stSel.innerHTML="";
-  STATUSES.forEach(s=>stSel.appendChild(h("option",{value:s},s)));
-  stSel.value=t.status||"Backlog";
-
-  // Populate group
-  const grSel=$("f-group");
-  grSel.innerHTML='<option value="">— Kies groep —</option>';
-  state.groups.forEach(g=>grSel.appendChild(h("option",{value:g.name},g.name)));
-  // Also add custom if not in list
-  if(t.group&&!state.groups.find(g=>g.name===t.group)){
-    grSel.appendChild(h("option",{value:t.group},t.group));
+  state.statuses.forEach(s=>stSel.appendChild(h("option",{value:s},s)));
+  // If task has a status not in the list, add it
+  if(t.status&&!state.statuses.includes(t.status)){
+    stSel.appendChild(h("option",{value:t.status},t.status));
   }
-  grSel.value=t.group||"";
+  stSel.value=t.status||state.statuses[0]||"Backlog";
 
   // Populate executors
   const exec1=$("f-exec1"), exec2=$("f-exec2");
@@ -1251,14 +1330,16 @@ function openTaskModal(taskId){
   exec1.value=(t.assignees||[])[0]||"";
   exec2.value=(t.assignees||[])[1]||"";
 
-  // Populate datalists for suggestions
-  populateDatalist("project-suggestions", [...new Set(state.tasks.map(t=>t.project).filter(Boolean))]);
-  populateDatalist("location-suggestions", [...new Set(state.tasks.map(t=>t.location).filter(Boolean))]);
-  populateDatalist("category-suggestions", [...new Set(state.tasks.map(t=>t.category).filter(Boolean))]);
+  // Populate datalists from state lists
+  populateDatalist("dl-projects", [...new Set(state.tasks.map(t=>t.project).filter(Boolean))]);
+  populateDatalist("dl-groups", state.groups.map(g=>g.name));
+  populateDatalist("dl-locations", state.locations);
+  populateDatalist("dl-categories", state.categories);
 
   // Fill fields
   $("f-title").value=t.title||"";
   $("f-project").value=t.project||"";
+  $("f-group").value=t.group||"";
   $("f-location").value=t.location||"";
   $("f-category").value=t.category||"";
   $("f-start").value=t.scheduled?.start||"";
@@ -1294,7 +1375,7 @@ function readTaskForm(){
 
   t.title=$("f-title").value.trim()||t.title;
   t.project=$("f-project").value.trim();
-  t.group=$("f-group").value;
+  t.group=$("f-group").value.trim();
   t.location=$("f-location").value.trim();
   t.category=$("f-category").value.trim();
   t.status=$("f-status").value;
@@ -1321,6 +1402,18 @@ function readTaskForm(){
 function saveTask(){
   const t=readTaskForm();
   if(!t) { toast("Geen klus geselecteerd","warn"); return; }
+
+  // Auto-add new values to taxonomy lists if user typed something new
+  if(t.group&&!state.groups.find(g=>g.name===t.group)){
+    const color=GROUP_COLORS[state.groups.length%GROUP_COLORS.length];
+    state.groups.push({id:slugify(t.group),name:t.group,color});
+  }
+  if(t.location&&!state.locations.includes(t.location)){
+    state.locations.push(t.location);
+  }
+  if(t.category&&!state.categories.includes(t.category)){
+    state.categories.push(t.category);
+  }
 
   // Ensure end date exists when start is set
   ensureSchedule(t);
@@ -1462,7 +1555,11 @@ function generateICal(){
 // EXPORT / IMPORT
 // ═══════════════════════════════════════════════════════════
 function exportJSON(){
-  const payload={exported_at:new Date().toISOString(),tasks:state.tasks,people:state.people,groups:state.groups};
+  const payload={
+    exported_at:new Date().toISOString(),
+    tasks:state.tasks, people:state.people, groups:state.groups,
+    statuses:state.statuses, locations:state.locations, categories:state.categories
+  };
   const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
   const a=document.createElement("a");
   a.href=URL.createObjectURL(blob);
@@ -1478,10 +1575,13 @@ async function importJSON(){
   try {
     const text=await file.text();
     const obj=JSON.parse(text);
-    if(!obj.tasks||!obj.people) throw new Error("Verwacht {tasks, people}");
+    if(!Array.isArray(obj.tasks)) throw new Error("Verwacht {tasks:[...]}");
     state.tasks=obj.tasks;
-    state.people=obj.people;
+    state.people=obj.people||[];
     if(obj.groups) state.groups=obj.groups;
+    if(obj.statuses) state.statuses=obj.statuses;
+    if(obj.locations) state.locations=obj.locations;
+    if(obj.categories) state.categories=obj.categories;
     state.tasks.forEach(t=>ensureSchedule(t));
     await commitChanges();
     toast("Import klaar ✓");
@@ -1615,31 +1715,63 @@ function wireUI(){
   $("btn-export")?.addEventListener("click",exportJSON);
   $("btn-import")?.addEventListener("click",importJSON);
   $("btn-ical")?.addEventListener("click",generateICal);
-  $("btn-add-group")?.addEventListener("click",()=>{
-    const name=$("new-group-name")?.value.trim();
-    if(!name) return;
-    const id=slugify(name);
-    if(state.groups.find(g=>g.id===id)){ toast("Groep bestaat al","warn"); return; }
-    const color=GROUP_COLORS[state.groups.length%GROUP_COLORS.length];
-    state.groups.push({id,name,color});
-    $("new-group-name").value="";
+
+  // Generic "add to list" helper
+  function wireAddButton(btnId,inputId,stateKey,renderFn,isGroup){
+    $(btnId)?.addEventListener("click",()=>{
+      const name=$(inputId)?.value.trim();
+      if(!name) return;
+      if(isGroup){
+        const id=slugify(name);
+        if(state.groups.find(g=>g.id===id)){ toast("Bestaat al","warn"); return; }
+        const color=GROUP_COLORS[state.groups.length%GROUP_COLORS.length];
+        state.groups.push({id,name,color});
+      } else {
+        if(state[stateKey].includes(name)){ toast("Bestaat al","warn"); return; }
+        state[stateKey].push(name);
+      }
+      $(inputId).value="";
+      markDirty();
+      renderFn();
+    });
+    // Enter key support
+    $(inputId)?.addEventListener("keydown",e=>{
+      if(e.key==="Enter"){ e.preventDefault(); $(btnId)?.click(); }
+    });
+  }
+
+  wireAddButton("btn-add-group","new-group-name","groups",()=>renderGroupsManager(),true);
+  wireAddButton("btn-add-location","new-location-name","locations",()=>renderSimpleListManager("mgr-locations",state.locations,"locations"));
+  wireAddButton("btn-add-category","new-category-name","categories",()=>renderSimpleListManager("mgr-categories",state.categories,"categories"));
+  wireAddButton("btn-add-status","new-status-name","statuses",()=>renderSimpleListManager("mgr-statuses",state.statuses,"statuses"));
+
+  // Danger zone
+  $("btn-clear-all")?.addEventListener("click",()=>{
+    if(!confirm("Alle klussen en personen wissen? Lijsten en instellingen blijven behouden.")) return;
+    state.tasks=[];
+    state.people=[];
     markDirty();
-    renderGroupsManager();
+    toast("Klussen en personen gewist");
+    switchView("dashboard");
   });
-  $("btn-reset")?.addEventListener("click",async ()=>{
-    if(!confirm("Reset naar defaults? Dit overschrijft je huidige data.")) return;
-    try {
-      const [tasksRes,peopleRes]=await Promise.all([fetch("data/tasks.json"),fetch("data/people.json")]);
-      state.tasks=await tasksRes.json();
-      state.people=await peopleRes.json();
-      state.groups=[...DEFAULT_GROUPS];
-      state.tasks.forEach(t=>ensureSchedule(t));
-      await commitChanges();
-      toast("Teruggezet ✓");
-      switchView("dashboard");
-    } catch(e){
-      toast("Reset mislukt: "+e.message,"err");
-    }
+
+  $("btn-clear-local")?.addEventListener("click",()=>{
+    if(!confirm("Lokale cache wissen? Als je met GitHub werkt, worden de data opnieuw opgehaald bij volgende sync.")) return;
+    localStorage.removeItem(STORAGE_KEY);
+    tasksSha=null; peopleSha=null; configSha=null;
+    toast("Lokale cache gewist — herlaad de pagina","ok");
+    setTimeout(()=>location.reload(),1500);
+  });
+
+  $("btn-reset-lists")?.addEventListener("click",()=>{
+    if(!confirm("Alle lijsten (groepen, locaties, statussen, categorieën) terugzetten naar standaard?")) return;
+    state.groups=[...DEFAULT_GROUPS];
+    state.statuses=[...DEFAULT_STATUSES];
+    state.locations=[...DEFAULT_LOCATIONS];
+    state.categories=[...DEFAULT_CATEGORIES];
+    markDirty();
+    renderSettings();
+    toast("Lijsten teruggezet ✓");
   });
 
   // Logout — clears user session, keeps GitHub config
@@ -1694,6 +1826,9 @@ async function loadDefaults(){
     if(tasksRes.ok) state.tasks=await tasksRes.json();
     if(peopleRes.ok) state.people=await peopleRes.json();
     state.groups=[...DEFAULT_GROUPS];
+    state.statuses=[...DEFAULT_STATUSES];
+    state.locations=[...DEFAULT_LOCATIONS];
+    state.categories=[...DEFAULT_CATEGORIES];
     state.tasks.forEach(t=>ensureSchedule(t));
     saveLocal();
   } catch(e){ console.warn("Could not load defaults:",e); }
@@ -1764,6 +1899,9 @@ function loadLocalData(){
     state.tasks=local.tasks||[];
     state.people=local.people||[];
     state.groups=local.groups||[...DEFAULT_GROUPS];
+    state.statuses=local.statuses||[...DEFAULT_STATUSES];
+    state.locations=local.locations||[...DEFAULT_LOCATIONS];
+    state.categories=local.categories||[...DEFAULT_CATEGORIES];
   }
 }
 
@@ -1778,8 +1916,10 @@ function showLoginError(msg){
 function startApp(){
   state.tasks.forEach(t=>ensureSchedule(t));
   if(!state.groups||!state.groups.length) state.groups=[...DEFAULT_GROUPS];
+  if(!state.statuses||!state.statuses.length) state.statuses=[...DEFAULT_STATUSES];
+  if(!state.locations||!state.locations.length) state.locations=[...DEFAULT_LOCATIONS];
+  if(!state.categories||!state.categories.length) state.categories=[...DEFAULT_CATEGORIES];
 
-  // Establish clean baseline for dirty tracking
   takeSnapshot();
 
   $("login-screen").classList.add("hidden");
