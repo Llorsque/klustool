@@ -10,7 +10,9 @@
     "priority": "",
     "status": "Backlog",
     "owner": "",
-    "assignees": [],
+    "assignees": [
+      "martje"
+    ],
     "estimate_hours": {
       "optimistic": 0,
       "realistic": 0,
