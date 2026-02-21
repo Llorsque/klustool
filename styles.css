@@ -280,12 +280,44 @@ a:hover { text-decoration: underline; }
 .nav-item svg { flex-shrink: 0; }
 
 .sidebar-bottom { display: flex; flex-direction: column; gap: 8px; }
+.sidebar-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: rgba(255,255,255,.04);
+}
+.user-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary), #C5952E);
+  color: white;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 14px;
+  flex-shrink: 0;
+  text-transform: uppercase;
+}
+.user-info { min-width: 0; }
+.user-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--sidebar-text-h);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sidebar.collapsed .sidebar-user .user-info { display: none; }
+.sidebar.collapsed .sidebar-user { justify-content: center; padding: 8px; }
+
 .sync-indicator {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  font-size: 12px;
+  gap: 6px;
+  font-size: 11px;
   color: var(--sidebar-text);
 }
 .sync-dot {
@@ -969,6 +1001,60 @@ a:hover { text-decoration: underline; }
 }
 .file-upload { display: flex; gap: 8px; align-items: center; }
 .danger-zone { border-color: rgba(196,69,60,.2); }
+
+/* GitHub connection info */
+.gh-connection-info {
+  margin-top: 10px;
+  padding: 10px 14px;
+  background: var(--success-light);
+  border: 1px solid rgba(61,139,110,.15);
+  border-radius: var(--radius);
+}
+.gh-conn-row {
+  font-size: 13px;
+  display: flex;
+  gap: 8px;
+}
+.gh-conn-label {
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+/* GitHub setup modal (reuse login card style) */
+.gh-setup-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  background: rgba(28,25,23,.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.gh-setup-card {
+  width: 100%;
+  max-width: 440px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  box-shadow: var(--shadow-xl);
+  animation: modalIn .25s ease;
+}
+.gh-setup-card h3 {
+  font-size: 18px;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+.gh-setup-card .login-subtitle {
+  margin-bottom: 20px;
+}
+.gh-setup-card .login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
 
 /* Groups manager */
 .group-chip {

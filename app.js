@@ -6,8 +6,15 @@
 
 // ─── Constants ─────────────────────────────────────────────
 const STORAGE_KEY   = "klusplanner_v2";
-const CONFIG_KEY    = "klusplanner_config";
+const CONFIG_KEY    = "klusplanner_gh";
+const SESSION_KEY   = "klusplanner_session";
 const STATUSES      = ["Backlog","Ingepland","Bezig","Wacht op materiaal","Wacht op hulp/afspraak","Afgerond"];
+
+// ─── User accounts (hardcoded) ─────────────────────────────
+const USERS = [
+  { username: "Martje",  password: "Benja01!",  displayName: "Martje",  avatar: "M" },
+  { username: "Justin",  password: "Teun01!",   displayName: "Justin",  avatar: "J" }
+];
 
 const GROUP_COLORS  = [
   "#5B8A72","#6B8FBF","#C5952E","#9B6FB5","#DC6B3F",
@@ -30,6 +37,7 @@ let state = {
   groups: [...DEFAULT_GROUPS],
   selectedTaskId: null,
   currentView: "dashboard",
+  currentUser: null,  // { username, displayName, avatar }
   overzicht: {
     mode: "list",       // list | gantt | agenda
     agendaZoom: "month",// month | week | day
@@ -257,12 +265,19 @@ function saveLocal(){
 function loadLocal(){
   try { const d=JSON.parse(localStorage.getItem(STORAGE_KEY)); if(d?.tasks) return d; } catch(e){} return null;
 }
-function saveConfig(){
+function saveGHConfig(){
   if(!githubConfig) { localStorage.removeItem(CONFIG_KEY); return; }
   try { localStorage.setItem(CONFIG_KEY, JSON.stringify(githubConfig)); } catch(e){}
 }
-function loadConfig(){
+function loadGHConfig(){
   try { return JSON.parse(localStorage.getItem(CONFIG_KEY)); } catch(e){ return null; }
+}
+function saveSession(){
+  if(!state.currentUser) { localStorage.removeItem(SESSION_KEY); return; }
+  try { localStorage.setItem(SESSION_KEY, JSON.stringify(state.currentUser)); } catch(e){}
+}
+function loadSession(){
+  try { return JSON.parse(localStorage.getItem(SESSION_KEY)); } catch(e){ return null; }
 }
 
 // ─── Save (auto-sync if online) ──────────────────────────
@@ -856,6 +871,115 @@ function renderPeople(){
 // ═══════════════════════════════════════════════════════════
 function renderSettings(){
   renderGroupsManager();
+  updateGHSettingsUI();
+}
+
+function updateGHSettingsUI(){
+  const statusText=$("gh-status-text");
+  const infoBox=$("gh-settings-info");
+  const repoLabel=$("gh-conn-repo");
+  const setupBtn=$("btn-gh-setup");
+  const disconnBtn=$("btn-gh-disconnect");
+
+  if(githubConfig){
+    statusText.textContent="Verbonden met GitHub — wijzigingen worden automatisch gesynchroniseerd.";
+    statusText.style.color="var(--success)";
+    infoBox?.classList.remove("hidden");
+    if(repoLabel) repoLabel.textContent=`${githubConfig.owner}/${githubConfig.repo}`;
+    setupBtn.textContent="Opnieuw koppelen";
+    setupBtn.classList.remove("primary");
+    setupBtn.classList.add("secondary");
+    disconnBtn?.classList.remove("hidden");
+  } else {
+    statusText.textContent="Niet verbonden — data wordt lokaal opgeslagen.";
+    statusText.style.color="";
+    infoBox?.classList.add("hidden");
+    setupBtn.textContent="GitHub koppelen";
+    setupBtn.classList.remove("secondary");
+    setupBtn.classList.add("primary");
+    disconnBtn?.classList.add("hidden");
+  }
+}
+
+function updateSidebarUser(){
+  const avatar=$("user-avatar");
+  const name=$("user-name");
+  if(!avatar||!name) return;
+  if(state.currentUser){
+    avatar.textContent=state.currentUser.avatar||state.currentUser.displayName?.charAt(0)||"?";
+    name.textContent=state.currentUser.displayName||"–";
+  } else {
+    avatar.textContent="?";
+    name.textContent="–";
+  }
+}
+
+function showGHSetupModal(){
+  // Create inline modal for GitHub setup
+  const existing=document.getElementById("gh-setup-overlay");
+  if(existing) existing.remove();
+
+  const overlay=h("div",{id:"gh-setup-overlay",class:"gh-setup-overlay",onclick:e=>{if(e.target===overlay)overlay.remove();}});
+  const card=h("div",{class:"gh-setup-card"});
+  card.innerHTML=`
+    <h3>GitHub koppelen</h3>
+    <p class="login-subtitle">Eenmalige configuratie — geldt voor alle gebruikers op dit apparaat</p>
+    <div class="login-form">
+      <div class="login-field">
+        <label for="gh-s-token">Personal Access Token</label>
+        <input id="gh-s-token" type="password" placeholder="ghp_xxxxxxxxxxxx" value="${githubConfig?.token||""}" />
+        <span class="login-hint">Fine-grained token · Permissions: Contents → Read & Write</span>
+      </div>
+      <div class="login-row">
+        <div class="login-field">
+          <label for="gh-s-owner">Repo eigenaar</label>
+          <input id="gh-s-owner" type="text" placeholder="jouw-username" value="${githubConfig?.owner||""}" />
+        </div>
+        <div class="login-field">
+          <label for="gh-s-repo">Repo naam</label>
+          <input id="gh-s-repo" type="text" placeholder="klusplanner" value="${githubConfig?.repo||""}" />
+        </div>
+      </div>
+      <button id="btn-gh-s-connect" class="btn-login" type="button">Verbinden</button>
+      <div id="gh-s-error" class="login-error hidden"></div>
+      <button id="btn-gh-s-cancel" class="btn-offline" type="button">Annuleren</button>
+    </div>
+  `;
+  overlay.appendChild(card);
+  document.body.appendChild(overlay);
+
+  $("btn-gh-s-cancel").onclick=()=>overlay.remove();
+  $("btn-gh-s-connect").onclick=async ()=>{
+    const token=$("gh-s-token").value.trim();
+    const owner=$("gh-s-owner").value.trim();
+    const repo=$("gh-s-repo").value.trim();
+    if(!token||!owner||!repo){
+      $("gh-s-error").textContent="Vul alle velden in.";
+      $("gh-s-error").classList.remove("hidden");
+      return;
+    }
+    $("btn-gh-s-connect").textContent="Verbinden...";
+    $("btn-gh-s-connect").disabled=true;
+
+    githubConfig={token,owner,repo};
+    try {
+      const valid=await ghValidate();
+      if(!valid) throw new Error("Kan repo niet bereiken. Check token/repo.");
+      saveGHConfig();
+      await syncFromGitHub();
+      overlay.remove();
+      toast("GitHub gekoppeld ✓");
+      updateGHSettingsUI();
+      switchView(state.currentView);
+    } catch(e){
+      githubConfig=loadGHConfig(); // revert
+      $("gh-s-error").textContent=e.message;
+      $("gh-s-error").classList.remove("hidden");
+    } finally {
+      const btn=$("btn-gh-s-connect");
+      if(btn){ btn.textContent="Verbinden"; btn.disabled=false; }
+    }
+  };
 }
 
 function renderGroupsManager(){
@@ -1275,14 +1399,31 @@ function wireUI(){
     }
   });
 
-  // Logout
+  // Logout — clears user session, keeps GitHub config
   $("btn-logout")?.addEventListener("click",()=>{
-    githubConfig=null;
-    saveConfig();
+    state.currentUser=null;
+    localStorage.removeItem(SESSION_KEY);
     isOnline=false;
     updateSyncIndicator("offline");
     $("app-shell").classList.add("hidden");
     $("login-screen").classList.remove("hidden");
+    $("login-card").classList.remove("hidden");
+    $("github-card").classList.add("hidden");
+    $("login-user").value="";
+    $("login-pass").value="";
+    $("login-user").focus();
+  });
+
+  // GitHub setup from settings
+  $("btn-gh-setup")?.addEventListener("click",showGHSetupModal);
+  $("btn-gh-disconnect")?.addEventListener("click",()=>{
+    if(!confirm("GitHub ontkoppelen? Data blijft lokaal beschikbaar.")) return;
+    githubConfig=null;
+    localStorage.removeItem(CONFIG_KEY);
+    isOnline=false;
+    updateSyncIndicator("offline");
+    updateGHSettingsUI();
+    toast("GitHub ontkoppeld");
   });
 }
 
@@ -1304,67 +1445,7 @@ function navGantt(dir){
   renderOverzicht();
 }
 
-// ═══════════════════════════════════════════════════════════
-// LOGIN
-// ═══════════════════════════════════════════════════════════
-function wireLogin(){
-  $("btn-login")?.addEventListener("click",async ()=>{
-    const token=$("login-token").value.trim();
-    const owner=$("login-owner").value.trim();
-    const repo=$("login-repo").value.trim();
-    const remember=$("login-remember").checked;
-
-    if(!token||!owner||!repo){
-      showLoginError("Vul alle velden in.");
-      return;
-    }
-
-    $("btn-login").textContent="Verbinden...";
-    $("btn-login").disabled=true;
-
-    githubConfig={token,owner,repo};
-    try {
-      const valid=await ghValidate();
-      if(!valid) throw new Error("Kan repo niet bereiken. Check token/repo.");
-
-      if(remember) saveConfig();
-      const synced=await syncFromGitHub();
-      if(!synced){
-        // Fallback to local
-        const local=loadLocal();
-        if(local){
-          state.tasks=local.tasks||[];
-          state.people=local.people||[];
-          state.groups=local.groups||DEFAULT_GROUPS;
-        }
-      }
-      startApp();
-    } catch(e){
-      githubConfig=null;
-      showLoginError(e.message);
-    } finally {
-      $("btn-login").textContent="Verbinden";
-      $("btn-login").disabled=false;
-    }
-  });
-
-  $("btn-offline")?.addEventListener("click",()=>{
-    githubConfig=null;
-    const local=loadLocal();
-    if(local){
-      state.tasks=local.tasks||[];
-      state.people=local.people||[];
-      state.groups=local.groups||DEFAULT_GROUPS;
-    } else {
-      // Try to load defaults via fetch
-      loadDefaults().then(()=>startApp()).catch(()=>startApp());
-      return;
-    }
-    state.tasks.forEach(t=>ensureSchedule(t));
-    startApp();
-  });
-}
-
+// ─── Load seed data ───────────────────────────────────────
 async function loadDefaults(){
   try {
     const [tasksRes,peopleRes]=await Promise.all([fetch("data/tasks.json"),fetch("data/people.json")]);
@@ -1376,8 +1457,129 @@ async function loadDefaults(){
   } catch(e){ console.warn("Could not load defaults:",e); }
 }
 
+// ═══════════════════════════════════════════════════════════
+// LOGIN — Two-step: user/pass → GitHub setup (if needed)
+// ═══════════════════════════════════════════════════════════
+function wireLogin(){
+  // Enter key support on login fields
+  $("login-user")?.addEventListener("keydown",e=>{ if(e.key==="Enter") $("login-pass")?.focus(); });
+  $("login-pass")?.addEventListener("keydown",e=>{ if(e.key==="Enter") $("btn-login")?.click(); });
+
+  // Step 1: Username/password login
+  $("btn-login")?.addEventListener("click",()=>{
+    const username=$("login-user").value.trim();
+    const password=$("login-pass").value;
+
+    if(!username||!password){
+      showLoginError("Vul gebruikersnaam en wachtwoord in.");
+      return;
+    }
+
+    const user=USERS.find(u=>
+      u.username.toLowerCase()===username.toLowerCase() && u.password===password
+    );
+
+    if(!user){
+      showLoginError("Onjuiste gebruikersnaam of wachtwoord.");
+      $("login-pass").value="";
+      $("login-pass").focus();
+      return;
+    }
+
+    // Login successful
+    state.currentUser={ username:user.username, displayName:user.displayName, avatar:user.avatar };
+    saveSession();
+
+    // Check if GitHub is already configured
+    const savedGH=loadGHConfig();
+    if(savedGH){
+      // GitHub already set up — go straight to app
+      githubConfig=savedGH;
+      proceedToApp();
+    } else {
+      // Show GitHub setup screen
+      $("login-card").classList.add("hidden");
+      $("github-card").classList.remove("hidden");
+    }
+  });
+
+  // Step 2a: GitHub connect
+  $("btn-gh-connect")?.addEventListener("click",async ()=>{
+    const token=$("gh-token").value.trim();
+    const owner=$("gh-owner").value.trim();
+    const repo=$("gh-repo").value.trim();
+
+    if(!token||!owner||!repo){
+      showGHError("Vul alle velden in.");
+      return;
+    }
+
+    $("btn-gh-connect").textContent="Verbinden...";
+    $("btn-gh-connect").disabled=true;
+
+    githubConfig={token,owner,repo};
+    try {
+      const valid=await ghValidate();
+      if(!valid) throw new Error("Kan repo niet bereiken. Check token en repo-gegevens.");
+      saveGHConfig();
+      await syncFromGitHub();
+      proceedToApp();
+    } catch(e){
+      githubConfig=null;
+      showGHError(e.message);
+    } finally {
+      $("btn-gh-connect").textContent="Verbinden & starten";
+      $("btn-gh-connect").disabled=false;
+    }
+  });
+
+  // Step 2b: Skip GitHub, go offline
+  $("btn-gh-skip")?.addEventListener("click",()=>{
+    githubConfig=null;
+    proceedToApp();
+  });
+}
+
+function proceedToApp(){
+  // Load data: GitHub first, then local fallback, then defaults
+  const tryLocal=()=>{
+    const local=loadLocal();
+    if(local){
+      state.tasks=local.tasks||[];
+      state.people=local.people||[];
+      state.groups=local.groups||[...DEFAULT_GROUPS];
+    }
+  };
+
+  if(githubConfig&&state.tasks.length===0){
+    // If sync already happened in the login flow, tasks are already loaded
+    // Otherwise load local as fallback
+    if(state.tasks.length===0) tryLocal();
+  } else {
+    tryLocal();
+  }
+
+  // Last resort: load seed data
+  if(state.tasks.length===0){
+    loadDefaults().then(()=>startApp()).catch(()=>startApp());
+    return;
+  }
+
+  state.tasks.forEach(t=>ensureSchedule(t));
+  startApp();
+}
+
 function showLoginError(msg){
   const el=$("login-error");
+  if(!el) return;
+  el.textContent=msg;
+  el.classList.remove("hidden");
+  setTimeout(()=>el.classList.add("hidden"),4000);
+}
+
+function showGHError(msg){
+  const el=$("gh-error");
+  if(!el) return;
   el.textContent=msg;
   el.classList.remove("hidden");
   setTimeout(()=>el.classList.add("hidden"),5000);
@@ -1390,6 +1592,7 @@ function startApp(){
   $("login-screen").classList.add("hidden");
   $("app-shell").classList.remove("hidden");
 
+  updateSidebarUser();
   wireUI();
   switchView("dashboard");
 }
@@ -1400,34 +1603,56 @@ function startApp(){
 (function init(){
   wireLogin();
 
-  // Auto-login if config saved
-  const savedConfig=loadConfig();
-  if(savedConfig){
-    githubConfig=savedConfig;
-    $("login-token").value=savedConfig.token;
-    $("login-owner").value=savedConfig.owner;
-    $("login-repo").value=savedConfig.repo;
+  // Check for existing session (user already logged in before)
+  const savedSession=loadSession();
+  if(savedSession?.username){
+    // Verify it's a valid user
+    const user=USERS.find(u=>u.username===savedSession.username);
+    if(user){
+      state.currentUser=savedSession;
+      const savedGH=loadGHConfig();
+      if(savedGH) githubConfig=savedGH;
 
-    // Try sync, fallback to local
-    syncFromGitHub().then(synced=>{
-      if(!synced){
+      // Try sync if GitHub connected
+      if(githubConfig){
+        syncFromGitHub().then(synced=>{
+          if(!synced){
+            const local=loadLocal();
+            if(local){
+              state.tasks=local.tasks||[];
+              state.people=local.people||[];
+              state.groups=local.groups||[...DEFAULT_GROUPS];
+            }
+          }
+          startApp();
+        }).catch(()=>{
+          const local=loadLocal();
+          if(local){
+            state.tasks=local.tasks||[];
+            state.people=local.people||[];
+            state.groups=local.groups||[...DEFAULT_GROUPS];
+          }
+          startApp();
+        });
+      } else {
+        // Offline — load local
         const local=loadLocal();
         if(local){
           state.tasks=local.tasks||[];
           state.people=local.people||[];
-          state.groups=local.groups||DEFAULT_GROUPS;
+          state.groups=local.groups||[...DEFAULT_GROUPS];
+        }
+        if(state.tasks.length===0){
+          loadDefaults().then(()=>startApp()).catch(()=>startApp());
+        } else {
+          startApp();
         }
       }
-      startApp();
-    }).catch(()=>{
-      const local=loadLocal();
-      if(local){
-        state.tasks=local.tasks||[];
-        state.people=local.people||[];
-        state.groups=local.groups||DEFAULT_GROUPS;
-      }
-      startApp();
-    });
+      return;
+    }
   }
-  // If no saved config, user must login or go offline
+
+  // No valid session — show login screen
+  $("login-screen").classList.remove("hidden");
+  $("login-user")?.focus();
 })();

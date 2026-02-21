@@ -13,42 +13,61 @@
 
   <!-- ==================== LOGIN SCREEN ==================== -->
   <div id="login-screen" class="login-screen">
-    <div class="login-card">
+    <!-- Step 1: User login -->
+    <div id="login-card" class="login-card">
       <div class="login-brand">
         <div class="login-logo">
           <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><rect x="2" y="14" width="12" height="16" rx="2" fill="#DC6B3F"/><rect x="18" y="6" width="12" height="24" rx="2" fill="#3D8B6E"/><rect x="10" y="10" width="12" height="20" rx="2" fill="#C5952E" opacity=".7"/></svg>
         </div>
         <h1>Klusplanner <span>Pro</span></h1>
-        <p class="login-subtitle">Verbind met je GitHub repo om samen te werken</p>
+        <p class="login-subtitle">Log in om verder te gaan</p>
       </div>
 
       <div class="login-form">
         <div class="login-field">
-          <label for="login-token">GitHub Personal Access Token</label>
-          <input id="login-token" type="password" placeholder="ghp_xxxxxxxxxxxx" autocomplete="off" />
-          <span class="login-hint">Fine-grained token met Contents read/write scope</span>
+          <label for="login-user">Gebruikersnaam</label>
+          <input id="login-user" type="text" placeholder="Jouw naam..." autocomplete="username" />
+        </div>
+        <div class="login-field">
+          <label for="login-pass">Wachtwoord</label>
+          <input id="login-pass" type="password" placeholder="••••••••" autocomplete="current-password" />
+        </div>
+        <button id="btn-login" class="btn-login" type="button">Inloggen</button>
+        <div id="login-error" class="login-error hidden"></div>
+      </div>
+    </div>
+
+    <!-- Step 2: GitHub connection (shown after first login if not yet configured) -->
+    <div id="github-card" class="login-card hidden">
+      <div class="login-brand">
+        <div class="login-logo">
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><rect x="2" y="14" width="12" height="16" rx="2" fill="#DC6B3F"/><rect x="18" y="6" width="12" height="24" rx="2" fill="#3D8B6E"/><rect x="10" y="10" width="12" height="20" rx="2" fill="#C5952E" opacity=".7"/></svg>
+        </div>
+        <h1>GitHub koppelen</h1>
+        <p class="login-subtitle">Eenmalige configuratie — geldt voor alle gebruikers</p>
+      </div>
+
+      <div class="login-form">
+        <div class="login-field">
+          <label for="gh-token">GitHub Personal Access Token</label>
+          <input id="gh-token" type="password" placeholder="ghp_xxxxxxxxxxxx" autocomplete="off" />
+          <span class="login-hint">Fine-grained token · Permissions: Contents → Read & Write</span>
         </div>
         <div class="login-row">
           <div class="login-field">
-            <label for="login-owner">Repo eigenaar</label>
-            <input id="login-owner" type="text" placeholder="jouw-username" />
+            <label for="gh-owner">Repo eigenaar</label>
+            <input id="gh-owner" type="text" placeholder="jouw-username" />
           </div>
           <div class="login-field">
-            <label for="login-repo">Repo naam</label>
-            <input id="login-repo" type="text" placeholder="klusplanner" />
+            <label for="gh-repo">Repo naam</label>
+            <input id="gh-repo" type="text" placeholder="klusplanner" />
           </div>
         </div>
-        <div class="login-field">
-          <label class="login-check">
-            <input id="login-remember" type="checkbox" checked />
-            <span>Onthoud op dit apparaat</span>
-          </label>
-        </div>
-        <button id="btn-login" class="btn-login" type="button">Verbinden</button>
-        <div id="login-error" class="login-error hidden"></div>
+        <button id="btn-gh-connect" class="btn-login" type="button">Verbinden & starten</button>
+        <div id="gh-error" class="login-error hidden"></div>
 
         <div class="login-divider"><span>of</span></div>
-        <button id="btn-offline" class="btn-offline" type="button">Offline gebruiken (localStorage)</button>
+        <button id="btn-gh-skip" class="btn-offline" type="button">Overslaan — offline werken</button>
       </div>
     </div>
   </div>
@@ -92,9 +111,15 @@
       </div>
 
       <div class="sidebar-bottom">
-        <div class="sync-indicator" id="sync-indicator">
-          <div class="sync-dot"></div>
-          <span id="sync-label">Offline</span>
+        <div class="sidebar-user" id="sidebar-user">
+          <div class="user-avatar" id="user-avatar">?</div>
+          <div class="user-info">
+            <div class="user-name" id="user-name">–</div>
+            <div class="sync-indicator" id="sync-indicator">
+              <div class="sync-dot"></div>
+              <span id="sync-label">Offline</span>
+            </div>
+          </div>
         </div>
         <button id="btn-logout" class="nav-item nav-logout">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
@@ -249,6 +274,17 @@
       <!-- VIEW: SETTINGS -->
       <section id="view-settings" class="view hidden">
         <div class="settings-grid">
+          <div class="panel">
+            <h3>GitHub verbinding</h3>
+            <p class="panel-desc" id="gh-status-text">Niet verbonden — data wordt lokaal opgeslagen.</p>
+            <div id="gh-settings-info" class="gh-connection-info hidden">
+              <div class="gh-conn-row"><span class="gh-conn-label">Repo:</span> <span id="gh-conn-repo">–</span></div>
+            </div>
+            <div class="settings-actions">
+              <button class="btn primary" id="btn-gh-setup">GitHub koppelen</button>
+              <button class="btn danger small hidden" id="btn-gh-disconnect">Ontkoppelen</button>
+            </div>
+          </div>
           <div class="panel">
             <h3>Import / Export</h3>
             <p class="panel-desc">Download of importeer je data als JSON.</p>
