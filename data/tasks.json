@@ -569,16 +569,18 @@
   },
   {
     "id": "TASK-017",
-    "project": "",
-    "group": "Binnen",
+    "project": "Mesdagstraat",
+    "group": "Mesdagstraat",
     "location": "",
     "type": "",
     "category": "",
-    "title": "Nieuwe klus",
+    "title": "Keuken afwerken",
     "priority": "",
     "status": "Backlog",
     "owner": "",
-    "assignees": [],
+    "assignees": [
+      "justin"
+    ],
     "estimate_hours": {
       "optimistic": 0,
       "realistic": 0,
@@ -595,7 +597,9 @@
     "definition_of_done": "",
     "materials": [],
     "tools": [],
-    "steps": [],
+    "steps": [
+      "Plint, Afkitten"
+    ],
     "notes": "",
     "inCalendar": true
   },
@@ -636,6 +640,38 @@
   },
   {
     "id": "TASK-019",
+    "project": "",
+    "group": "Binnen",
+    "location": "",
+    "type": "",
+    "category": "",
+    "title": "Nieuwe klus",
+    "priority": "",
+    "status": "Backlog",
+    "owner": "",
+    "assignees": [],
+    "estimate_hours": {
+      "optimistic": 0,
+      "realistic": 0,
+      "worst": 0
+    },
+    "actual_hours": 0,
+    "scheduled": {
+      "date": "",
+      "timeblock": "",
+      "start": "",
+      "end": ""
+    },
+    "dependencies": [],
+    "definition_of_done": "",
+    "materials": [],
+    "tools": [],
+    "steps": [],
+    "notes": "",
+    "inCalendar": true
+  },
+  {
+    "id": "TASK-020",
     "project": "",
     "group": "Binnen",
     "location": "",
