@@ -42,7 +42,7 @@
     "category": "",
     "title": "Bovenverdieping slopen",
     "priority": "",
-    "status": "Backlog",
+    "status": "Ingepland",
     "owner": "",
     "assignees": [
       "justin"
@@ -63,7 +63,9 @@
     "definition_of_done": "",
     "materials": [],
     "tools": [],
-    "steps": [],
+    "steps": [
+      "Handjes regelen"
+    ],
     "notes": "",
     "inCalendar": true
   },
