@@ -106,5 +106,69 @@
     "steps": [],
     "notes": "",
     "inCalendar": true
+  },
+  {
+    "id": "TASK-004",
+    "project": "",
+    "group": "Binnen",
+    "location": "",
+    "type": "",
+    "category": "",
+    "title": "Nieuwe klus",
+    "priority": "",
+    "status": "Backlog",
+    "owner": "",
+    "assignees": [],
+    "estimate_hours": {
+      "optimistic": 0,
+      "realistic": 0,
+      "worst": 0
+    },
+    "actual_hours": 0,
+    "scheduled": {
+      "date": "",
+      "timeblock": "",
+      "start": "",
+      "end": ""
+    },
+    "dependencies": [],
+    "definition_of_done": "",
+    "materials": [],
+    "tools": [],
+    "steps": [],
+    "notes": "",
+    "inCalendar": true
+  },
+  {
+    "id": "TASK-005",
+    "project": "Mesdagstraat",
+    "group": "Binnen",
+    "location": "Woonkamer",
+    "type": "",
+    "category": "Schilderwerk",
+    "title": "Plafond witten - kamers",
+    "priority": "",
+    "status": "Ingepland",
+    "owner": "",
+    "assignees": [],
+    "estimate_hours": {
+      "optimistic": 0,
+      "realistic": 0,
+      "worst": 0
+    },
+    "actual_hours": 0,
+    "scheduled": {
+      "date": "",
+      "timeblock": "",
+      "start": "",
+      "end": ""
+    },
+    "dependencies": [],
+    "definition_of_done": "Woonkamer en badkamer",
+    "materials": [],
+    "tools": [],
+    "steps": [],
+    "notes": "",
+    "inCalendar": true
   }
 ]
