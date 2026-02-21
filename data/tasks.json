@@ -96,8 +96,8 @@
     "scheduled": {
       "date": "2026-03-14",
       "timeblock": "",
-      "start": "2026-03-14T09:00",
-      "end": "2026-03-14T17:00"
+      "start": "2026-03-14",
+      "end": "2026-03-14T01:00"
     },
     "dependencies": [],
     "definition_of_done": "",
@@ -113,7 +113,7 @@
     "notes": "",
     "inCalendar": true,
     "subtasks": [],
-    "allDay": false
+    "allDay": true
   },
   {
     "id": "TASK-004",
