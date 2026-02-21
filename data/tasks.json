@@ -30,5 +30,39 @@
     "steps": [],
     "notes": "",
     "inCalendar": true
+  },
+  {
+    "id": "TASK-002",
+    "project": "Mesdagstraat",
+    "group": "Binnen",
+    "location": "",
+    "type": "",
+    "category": "",
+    "title": "Makelaar bellen",
+    "priority": "",
+    "status": "Ingepland",
+    "owner": "",
+    "assignees": [
+      "justin"
+    ],
+    "estimate_hours": {
+      "optimistic": 0,
+      "realistic": 0,
+      "worst": 0
+    },
+    "actual_hours": 0,
+    "scheduled": {
+      "date": "2026-02-24",
+      "timeblock": "",
+      "start": "2026-02-24T12:00",
+      "end": "2026-02-24T12:30"
+    },
+    "dependencies": [],
+    "definition_of_done": "",
+    "materials": [],
+    "tools": [],
+    "steps": [],
+    "notes": "",
+    "inCalendar": true
   }
 ]
