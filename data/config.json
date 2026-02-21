@@ -1,0 +1,59 @@
+{
+  "groups": [
+    {
+      "id": "binnen",
+      "name": "Binnen",
+      "color": "#5B8A72"
+    },
+    {
+      "id": "buiten",
+      "name": "Buiten",
+      "color": "#6B8FBF"
+    },
+    {
+      "id": "pre-verkoop",
+      "name": "Pre-verkoop",
+      "color": "#C5952E"
+    },
+    {
+      "id": "nieuw-huis",
+      "name": "Nieuw huis",
+      "color": "#9B6FB5"
+    },
+    {
+      "id": "logistiek",
+      "name": "Logistiek",
+      "color": "#DC6B3F"
+    }
+  ],
+  "statuses": [
+    "Backlog",
+    "Ingepland",
+    "Bezig",
+    "Wacht op materiaal",
+    "Wacht op hulp/afspraak",
+    "Afgerond"
+  ],
+  "locations": [
+    "Woonkamer",
+    "Keuken",
+    "Badkamer",
+    "Slaapkamer",
+    "Tuin",
+    "Schuur",
+    "Zolder",
+    "Hal",
+    "Garage",
+    "Overloop"
+  ],
+  "categories": [
+    "Schilderwerk",
+    "Timmerwerk",
+    "Elektra",
+    "Loodgieter",
+    "Schoonmaak",
+    "Verhuizen",
+    "Reparatie",
+    "Installatie"
+  ]
+}
