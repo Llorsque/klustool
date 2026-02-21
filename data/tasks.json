@@ -395,5 +395,39 @@
     "steps": [],
     "notes": "",
     "inCalendar": true
+  },
+  {
+    "id": "TASK-012",
+    "project": "Mesdagstraat",
+    "group": "Binnen",
+    "location": "",
+    "type": "",
+    "category": "",
+    "title": "Wasmachine meubel afmaken",
+    "priority": "",
+    "status": "Backlog",
+    "owner": "",
+    "assignees": [
+      "justin"
+    ],
+    "estimate_hours": {
+      "optimistic": 0,
+      "realistic": 0,
+      "worst": 0
+    },
+    "actual_hours": 0,
+    "scheduled": {
+      "date": "",
+      "timeblock": "",
+      "start": "",
+      "end": ""
+    },
+    "dependencies": [],
+    "definition_of_done": "",
+    "materials": [],
+    "tools": [],
+    "steps": [],
+    "notes": "",
+    "inCalendar": true
   }
 ]
