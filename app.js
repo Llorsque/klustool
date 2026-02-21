@@ -831,23 +831,21 @@ function renderMaterials(){
   const matFilter=$("mat-filter-status")?.value||"";
 
   const openTasks=state.tasks.filter(t=>t.status!=="Afgerond");
-  const map=new Map();
+  // Collect all materials with references back to their source tasks
+  const allMats=[];
   openTasks.forEach(t=>{
-    (t.materials||[]).forEach(m=>{
+    (t.materials||[]).forEach((m,mi)=>{
       const item=(typeof m==="string"?m:(m.item||"")).trim();
       if(!item) return;
-      if(!map.has(item)) map.set(item,{qty:new Set(),statuses:new Set(),tasks:new Set()});
-      if(typeof m!=="string"){
-        map.get(item).qty.add((m.qty||"").trim());
-        map.get(item).statuses.add((m.status||"").trim());
-      }
-      map.get(item).tasks.add(t.title);
+      const qty=typeof m==="string"?"":((m.qty||"").trim());
+      const status=typeof m==="string"?"":((m.status||"").trim());
+      allMats.push({ item, qty, status, taskId:t.id, taskTitle:t.title, matIndex:mi });
     });
   });
 
-  let rows=Array.from(map.entries()).sort((a,b)=>a[0].localeCompare(b[0]));
+  let rows=allMats.sort((a,b)=>a.item.localeCompare(b.item));
   if(matFilter){
-    rows=rows.filter(([,info])=>Array.from(info.statuses).some(s=>s.toLowerCase().includes(matFilter.toLowerCase())));
+    rows=rows.filter(r=>r.status.toLowerCase().includes(matFilter.toLowerCase()));
   }
 
   if(!rows.length){
@@ -855,20 +853,36 @@ function renderMaterials(){
     return;
   }
 
+  const matStatuses=["","kopen","kijken","in huis","onderweg","geregeld"];
   const table=h("table",{class:"data-table"});
   table.appendChild(h("thead",{},[h("tr",{},[
-    h("th",{},"Materiaal"),h("th",{},"Hoeveelheid"),h("th",{},"Status"),h("th",{},"Klussen")
+    h("th",{},"Materiaal"),h("th",{},"Hoeveelheid"),h("th",{},"Status"),h("th",{},"Klus")
   ])]));
   const tbody=h("tbody");
-  rows.forEach(([item,info])=>{
-    const qty=Array.from(info.qty).filter(Boolean).join(", ")||"–";
-    const sts=Array.from(info.statuses).filter(Boolean).join(", ")||"–";
-    const tasks=Array.from(info.tasks).join(", ");
+  rows.forEach(r=>{
+    const statusSel=h("select",{style:{padding:"4px 8px",border:"1px solid var(--border)",borderRadius:"var(--radius)",fontSize:"12px",cursor:"pointer"}});
+    matStatuses.forEach(s=>{
+      const opt=h("option",{value:s},s||"—");
+      if(s===r.status) opt.selected=true;
+      statusSel.appendChild(opt);
+    });
+    statusSel.addEventListener("click",e=>e.stopPropagation());
+    statusSel.addEventListener("change",e=>{
+      e.stopPropagation();
+      const task=state.tasks.find(t=>t.id===r.taskId);
+      if(!task) return;
+      const mat=task.materials[r.matIndex];
+      if(typeof mat==="object") mat.status=statusSel.value;
+      saveLocal();
+      if(githubConfig) syncToGitHub();
+      toast("Status bijgewerkt ✓");
+    });
+
     tbody.appendChild(h("tr",{style:{cursor:"default"}},[
-      h("td",{style:{fontWeight:"600"}},item),
-      h("td",{},qty),
-      h("td",{},sts),
-      h("td",{class:"cell-small"},tasks)
+      h("td",{style:{fontWeight:"600"}},r.item),
+      h("td",{},r.qty||"–"),
+      h("td",{},[statusSel]),
+      h("td",{class:"cell-small"},r.taskTitle)
     ]));
   });
   table.appendChild(tbody);
@@ -882,33 +896,72 @@ function renderPeople(){
   const wrap=$("people-table-wrap");
   wrap.innerHTML="";
 
+  if(!state.people.length){
+    wrap.innerHTML='<div class="empty-state"><p>Nog geen personen toegevoegd.</p></div>';
+    return;
+  }
+
   const table=h("table",{class:"data-table"});
-  table.appendChild(h("thead",{},[h("tr",{},[h("th",{},"ID"),h("th",{},"Naam"),h("th",{},"Klussen"),h("th",{},"")])]));
+  table.appendChild(h("thead",{},[h("tr",{},[
+    h("th",{},"ID"),h("th",{style:{width:"40%"}},"Naam"),h("th",{},"Klussen"),h("th",{style:{width:"120px"}},"Acties")
+  ])]));
   const tbody=h("tbody");
+
   state.people.slice().sort((a,b)=>a.name.localeCompare(b.name)).forEach(p=>{
     const taskCount=state.tasks.filter(t=>(t.assignees||[]).includes(p.id)).length;
-    const nameInput=h("input",{type:"text",value:p.name,style:{border:"1px solid var(--border)",borderRadius:"var(--radius)",padding:"6px 10px",width:"100%"}});
-    nameInput.onchange=()=>{
-      p.name=nameInput.value.trim()||p.name;
-      save();
-    };
-    const delBtn=h("button",{class:"btn danger small",onclick:()=>{
-      if(!confirm(`Verwijder ${p.name}?`)) return;
+
+    // Editable name input
+    const nameInput=document.createElement("input");
+    nameInput.type="text";
+    nameInput.value=p.name;
+    nameInput.style.cssText="border:1px solid var(--border);border-radius:var(--radius);padding:6px 10px;width:100%;font-size:13px;background:var(--surface);";
+    nameInput.addEventListener("click",e=>e.stopPropagation());
+    nameInput.addEventListener("focus",()=>{ nameInput.style.borderColor="var(--primary)"; nameInput.style.boxShadow="0 0 0 3px var(--primary-subtle)"; });
+    nameInput.addEventListener("blur",()=>{ nameInput.style.borderColor="var(--border)"; nameInput.style.boxShadow="none"; });
+    nameInput.addEventListener("change",e=>{
+      e.stopPropagation();
+      const newName=nameInput.value.trim();
+      if(!newName){ nameInput.value=p.name; return; }
+      p.name=newName;
+      saveLocal();
+      if(githubConfig) syncToGitHub();
+      toast(`Naam gewijzigd naar "${newName}" ✓`);
+    });
+
+    // Delete button
+    const delBtn=document.createElement("button");
+    delBtn.className="btn danger small";
+    delBtn.textContent="Verwijder";
+    delBtn.addEventListener("click",e=>{
+      e.stopPropagation();
+      e.preventDefault();
+      if(!confirm(`"${p.name}" verwijderen?\n\nDeze persoon wordt ook verwijderd als uitvoerder bij ${taskCount} klus(sen).`)) return;
       state.people=state.people.filter(x=>x.id!==p.id);
       state.tasks.forEach(t=>{
         if(t.owner===p.id) t.owner="";
         t.assignees=(t.assignees||[]).filter(id=>id!==p.id);
       });
-      save();
+      saveLocal();
+      if(githubConfig) syncToGitHub();
+      toast(`${p.name} verwijderd`);
       renderPeople();
-    }},"Verwijder");
-    tbody.appendChild(h("tr",{style:{cursor:"default"}},[
-      h("td",{class:"cell-muted"},p.id),
-      h("td",{},nameInput),
-      h("td",{class:"cell-small"},`${taskCount} klussen`),
-      h("td",{},delBtn)
-    ]));
+    });
+
+    const tr=document.createElement("tr");
+    tr.style.cursor="default";
+
+    const td1=document.createElement("td"); td1.className="cell-muted"; td1.textContent=p.id;
+    const td2=document.createElement("td"); td2.appendChild(nameInput);
+    const td3=document.createElement("td"); td3.className="cell-small"; td3.textContent=`${taskCount} klussen`;
+    const td4=document.createElement("td"); td4.appendChild(delBtn);
+
+    tr.appendChild(td1);
+    tr.appendChild(td2);
+    tr.appendChild(td3);
+    tr.appendChild(td4);
+    tbody.appendChild(tr);
   });
+
   table.appendChild(tbody);
   wrap.appendChild(table);
 }
@@ -1033,18 +1086,100 @@ function renderGroupsManager(){
   const container=$("groups-manager");
   if(!container) return;
   container.innerHTML="";
+
+  if(!state.groups.length){
+    container.innerHTML='<p style="color:var(--text-tertiary);font-size:13px;">Nog geen groepen. Voeg er hieronder een toe.</p>';
+    return;
+  }
+
+  const table=document.createElement("table");
+  table.className="data-table";
+  table.style.marginBottom="0";
+
+  const thead=document.createElement("thead");
+  thead.innerHTML='<tr><th>Kleur</th><th style="width:50%">Naam</th><th>Klussen</th><th style="width:100px">Acties</th></tr>';
+  table.appendChild(thead);
+
+  const tbody=document.createElement("tbody");
+
   state.groups.forEach(g=>{
-    const chip=h("span",{class:"group-chip",style:{borderColor:g.color+"55",background:g.color+"15",color:g.color}},[
-      g.name,
-      h("span",{class:"remove-group",onclick:()=>{
-        if(!confirm(`Groep "${g.name}" verwijderen?`)) return;
-        state.groups=state.groups.filter(x=>x.id!==g.id);
-        save();
-        renderGroupsManager();
-      }},"×")
-    ]);
-    container.appendChild(chip);
+    const taskCount=state.tasks.filter(t=>t.group===g.name||t.group===g.id).length;
+    const tr=document.createElement("tr");
+    tr.style.cursor="default";
+
+    // Color picker
+    const tdColor=document.createElement("td");
+    const colorInput=document.createElement("input");
+    colorInput.type="color";
+    colorInput.value=g.color||"#78716C";
+    colorInput.style.cssText="width:32px;height:28px;border:1px solid var(--border);border-radius:6px;cursor:pointer;padding:2px;";
+    colorInput.addEventListener("click",e=>e.stopPropagation());
+    colorInput.addEventListener("change",e=>{
+      e.stopPropagation();
+      g.color=colorInput.value;
+      saveLocal();
+      if(githubConfig) syncToGitHub();
+      toast("Kleur bijgewerkt ✓");
+    });
+    tdColor.appendChild(colorInput);
+
+    // Editable name
+    const tdName=document.createElement("td");
+    const nameInput=document.createElement("input");
+    nameInput.type="text";
+    nameInput.value=g.name;
+    nameInput.style.cssText="border:1px solid var(--border);border-radius:var(--radius);padding:6px 10px;width:100%;font-size:13px;font-weight:600;background:var(--surface);";
+    nameInput.addEventListener("click",e=>e.stopPropagation());
+    nameInput.addEventListener("focus",()=>{ nameInput.style.borderColor="var(--primary)"; nameInput.style.boxShadow="0 0 0 3px var(--primary-subtle)"; });
+    nameInput.addEventListener("blur",()=>{ nameInput.style.borderColor="var(--border)"; nameInput.style.boxShadow="none"; });
+    nameInput.addEventListener("change",e=>{
+      e.stopPropagation();
+      const oldName=g.name;
+      const newName=nameInput.value.trim();
+      if(!newName){ nameInput.value=g.name; return; }
+      // Update all tasks referencing old name
+      state.tasks.forEach(t=>{
+        if(t.group===oldName) t.group=newName;
+      });
+      g.name=newName;
+      g.id=slugify(newName)||g.id;
+      saveLocal();
+      if(githubConfig) syncToGitHub();
+      toast(`Groep hernoemd naar "${newName}" ✓`);
+    });
+    tdName.appendChild(nameInput);
+
+    // Count
+    const tdCount=document.createElement("td");
+    tdCount.className="cell-small";
+    tdCount.textContent=`${taskCount} klussen`;
+
+    // Delete
+    const tdActions=document.createElement("td");
+    const delBtn=document.createElement("button");
+    delBtn.className="btn danger small";
+    delBtn.textContent="Verwijder";
+    delBtn.addEventListener("click",e=>{
+      e.stopPropagation();
+      e.preventDefault();
+      if(!confirm(`Groep "${g.name}" verwijderen?\n\n${taskCount} klus(sen) behouden hun groepsnaam maar de groep verdwijnt uit de filters.`)) return;
+      state.groups=state.groups.filter(x=>x.id!==g.id);
+      saveLocal();
+      if(githubConfig) syncToGitHub();
+      toast(`Groep "${g.name}" verwijderd`);
+      renderGroupsManager();
+    });
+    tdActions.appendChild(delBtn);
+
+    tr.appendChild(tdColor);
+    tr.appendChild(tdName);
+    tr.appendChild(tdCount);
+    tr.appendChild(tdActions);
+    tbody.appendChild(tr);
   });
+
+  table.appendChild(tbody);
+  container.appendChild(table);
 }
 
 // ═══════════════════════════════════════════════════════════

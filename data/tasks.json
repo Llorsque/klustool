@@ -933,6 +933,47 @@
     "notes": ""
   },
   {
+    "id": "OH-BIN-22",
+    "project": "Oud huis",
+    "group": "Binnen",
+    "location": "Gang/plafond",
+    "type": "Binnen",
+    "category": "Afwerking",
+    "title": "Plafondkapje vervangen (vergeeld → nieuw wit)",
+    "priority": "",
+    "status": "Backlog",
+    "owner": "ian",
+    "assignees": [],
+    "estimate_hours": {
+      "optimistic": 0.25,
+      "realistic": 0.5,
+      "worst": 1
+    },
+    "actual_hours": 0,
+    "scheduled": {
+      "date": "",
+      "timeblock": "",
+      "start": "",
+      "end": ""
+    },
+    "dependencies": [],
+    "definition_of_done": "Nieuw kapje zit strak en netjes gemonteerd.",
+    "materials": [
+      "Plafondkapje wit|1|in huis"
+    ],
+    "tools": [
+      "ladder",
+      "schroevendraaier"
+    ],
+    "steps": [
+      "Stroom uit",
+      "Oud kapje verwijderen",
+      "Nieuw plaatsen",
+      "Test"
+    ],
+    "notes": ""
+  },
+  {
     "id": "OH-PRE-01",
     "project": "Oud huis",
     "group": "Pre-verkoop",
