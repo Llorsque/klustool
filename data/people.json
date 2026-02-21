@@ -2,5 +2,9 @@
   {
     "id": "martje",
     "name": "Martje"
+  },
+  {
+    "id": "persoon",
+    "name": "Persoon"
   }
 ]
