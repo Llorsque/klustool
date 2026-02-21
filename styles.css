@@ -837,6 +837,17 @@ a:hover { text-decoration: underline; }
 .gantt-task-indent {
   padding-left: 34px !important;
 }
+.gantt-subtask-indent {
+  padding-left: 52px !important;
+  background: var(--bg-subtle) !important;
+}
+.gantt-bar-sub {
+  top: 4px !important;
+  bottom: 4px !important;
+  font-size: 11px !important;
+  border-radius: 6px !important;
+  opacity: .85;
+}
 .gantt-track {
   border-bottom: 1px solid var(--border);
   position: relative;
@@ -1209,6 +1220,160 @@ a:hover { text-decoration: underline; }
   box-shadow: 0 0 0 3px var(--primary-subtle);
 }
 .form-field textarea { resize: vertical; min-height: 60px; }
+
+/* ============================================
+   SUBTASKS (inside task modal)
+   ============================================ */
+.subtasks-section {
+  padding: 0 24px 20px;
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+}
+.subtasks-header {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 16px 0 8px;
+}
+.subtasks-header h4 {
+  font-size: 14px;
+  font-weight: 700;
+  margin: 0;
+}
+.subtasks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.subtask-card {
+  display: grid;
+  grid-template-columns: 28px 1fr auto;
+  align-items: start;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  transition: border-color .15s, background .15s;
+}
+.subtask-card:hover { border-color: var(--border-strong); }
+.subtask-card.done {
+  opacity: .55;
+  background: var(--surface);
+}
+.subtask-card.done .subtask-title { text-decoration: line-through; }
+
+.subtask-check {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid var(--border-strong);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 2px;
+  transition: all .15s;
+  background: var(--surface);
+  flex-shrink: 0;
+}
+.subtask-check:hover { border-color: var(--success); background: var(--success-subtle); }
+.subtask-check.checked {
+  background: var(--success);
+  border-color: var(--success);
+  color: white;
+}
+
+.subtask-body { min-width: 0; }
+.subtask-title {
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  background: transparent;
+  width: 100%;
+  padding: 0;
+  outline: none;
+  color: var(--text);
+}
+.subtask-title:focus { border-bottom: 1px dashed var(--primary); }
+.subtask-schedule-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+.subtask-schedule-row input[type="datetime-local"] {
+  font-size: 12px;
+  padding: 3px 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  max-width: 180px;
+}
+.subtask-schedule-row label {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  font-weight: 600;
+}
+.subtask-cal-btn {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all .15s;
+}
+.subtask-cal-btn.on {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: white;
+}
+.subtask-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-end;
+}
+.subtask-del {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  color: var(--text-tertiary);
+  padding: 0 2px;
+  line-height: 1;
+  transition: color .15s;
+}
+.subtask-del:hover { color: var(--danger); }
+
+.subtask-add-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+.subtask-input-title {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  font-size: 13px;
+  color: var(--text);
+  outline: none;
+  transition: border-color .15s;
+}
+.subtask-input-title:focus { border-color: var(--primary); border-style: solid; }
+.subtask-empty {
+  text-align: center;
+  padding: 12px;
+  color: var(--text-tertiary);
+  font-size: 13px;
+  font-style: italic;
+}
 
 /* ============================================
    TOGGLE BUTTON (calendar on/off)

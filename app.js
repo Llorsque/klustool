@@ -81,13 +81,36 @@ function fmtDate(iso){
 }
 function fmtDateTime(iso){
   if(!iso) return "–";
-  try { const d=new Date(iso); const p=n=>String(n).padStart(2,"0"); return `${p(d.getDate())}/${p(d.getMonth()+1)} ${p(d.getHours())}:${p(d.getMinutes())}`; } catch(e){ return iso; }
+  try {
+    // Date-only string (e.g. "2026-03-15") — no time component
+    if(/^\d{4}-\d{2}-\d{2}$/.test(iso)){
+      const [y,m,d]=iso.split("-");
+      return `${d}/${m}/${y}`;
+    }
+    const d=new Date(iso); const p=n=>String(n).padStart(2,"0");
+    return `${p(d.getDate())}/${p(d.getMonth()+1)} ${p(d.getHours())}:${p(d.getMinutes())}`;
+  } catch(e){ return iso; }
 }
 function fmtHours(n){
   if(n==null||n===""||isNaN(n)) return "–";
   return Number(n)%1===0?String(Number(n)):Number(n).toFixed(1).replace(".",",");
 }
 function escHtml(s){ return String(s??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+// Parse date string safely (date-only "2026-03-15" → local midnight, datetime stays as-is)
+function parseDate(s){ return s?new Date(/^\d{4}-\d{2}-\d{2}$/.test(s)?s+"T00:00:00":s):null; }
+// Get display start/end for a task (all-day end gets +1 day so bars have width)
+function taskDisplayDates(item){
+  const s=parseDate(item.scheduled?.start);
+  if(!s) return null;
+  let e=item.scheduled?.end?parseDate(item.scheduled.end):null;
+  if(item.allDay){
+    // All-day: end is inclusive date, so add 1 day for display range
+    e=e||new Date(s);
+    e=new Date(e.getFullYear(),e.getMonth(),e.getDate()+1);
+  }
+  if(!e) e=new Date(s.getTime()+36e5);
+  return {s,e};
+}
 function slugify(s){ return (s||"").toLowerCase().trim().replace(/\s+/g,"-").replace(/[^a-z0-9\-]/g,"").replace(/-+/g,"-"); }
 
 function statusClass(status){
@@ -162,28 +185,43 @@ function ensureSchedule(t){
 
   // Migrate legacy date/timeblock → start/end
   if(!t.scheduled.start&&t.scheduled.date){
-    t.scheduled.start=t.scheduled.date+"T09:00";
-    if(!t.scheduled.end) t.scheduled.end=t.scheduled.date+"T17:00";
+    if(t.allDay){
+      t.scheduled.start=t.scheduled.date;
+      if(!t.scheduled.end) t.scheduled.end=t.scheduled.date;
+    } else {
+      t.scheduled.start=t.scheduled.date+"T09:00";
+      if(!t.scheduled.end) t.scheduled.end=t.scheduled.date+"T17:00";
+    }
   }
 
   // If start exists but end is missing/empty → auto-generate end
   if(t.scheduled.start&&!t.scheduled.end){
-    try {
-      const s=new Date(t.scheduled.start);
-      const hrs=Number(t.estimate_hours?.realistic)||1;
-      s.setMinutes(s.getMinutes()+Math.round(hrs*60));
-      const p=n=>String(n).padStart(2,"0");
-      t.scheduled.end=`${s.getFullYear()}-${p(s.getMonth()+1)}-${p(s.getDate())}T${p(s.getHours())}:${p(s.getMinutes())}`;
-    } catch(e){}
+    if(t.allDay){
+      // All-day: end = start (same day)
+      t.scheduled.end=t.scheduled.start.slice(0,10);
+    } else {
+      try {
+        const s=parseDate(t.scheduled.start);
+        const hrs=Number(t.estimate_hours?.realistic)||1;
+        s.setMinutes(s.getMinutes()+Math.round(hrs*60));
+        const p=n=>String(n).padStart(2,"0");
+        t.scheduled.end=`${s.getFullYear()}-${p(s.getMonth()+1)}-${p(s.getDate())}T${p(s.getHours())}:${p(s.getMinutes())}`;
+      } catch(e){}
+    }
   }
 
   // Keep legacy date in sync
   if(t.scheduled.start&&!t.scheduled.date){
-    try { t.scheduled.date=t.scheduled.start.split("T")[0]; } catch(e){}
+    try { t.scheduled.date=t.scheduled.start.split("T")[0].slice(0,10); } catch(e){}
   }
 
   if(!Array.isArray(t.assignees)) t.assignees=[];
-  if(typeof t.inCalendar==="undefined") t.inCalendar=true; // default: include in calendar
+  if(!Array.isArray(t.subtasks)) t.subtasks=[];
+  if(typeof t.inCalendar==="undefined") t.inCalendar=true;
+  if(typeof t.allDay==="undefined") t.allDay=false;
+
+  // Auto-promote Backlog → Ingepland when scheduled
+  if(t.scheduled.start && t.status==="Backlog") t.status="Ingepland";
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -639,8 +677,11 @@ function renderListView(container){
     const exec=[getPersonName((t.assignees||[])[0]),getPersonName((t.assignees||[])[1])].filter(x=>x!=="–").join(", ")||"–";
 
     const calIcon=t.inCalendar!==false&&t.scheduled?.start?'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--primary);flex-shrink:0;margin-left:4px;vertical-align:middle"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>':"";
+    const stCount=(t.subtasks||[]).length;
+    const stDone=(t.subtasks||[]).filter(s=>s.status==="done").length;
+    const stBadge=stCount?` <span style="font-size:11px;font-weight:400;color:var(--text-tertiary);margin-left:4px">${stDone}/${stCount} subtaken</span>`:"";
     const titleCell=document.createElement("td");
-    titleCell.innerHTML=`<span style="font-weight:600">${escHtml(t.title)}</span>${calIcon}`;
+    titleCell.innerHTML=`<span style="font-weight:600">${escHtml(t.title)}</span>${calIcon}${stBadge}`;
     titleCell.style.cssText="display:flex;align-items:center;gap:2px;";
 
     tbody.appendChild(h("tr",{onclick:()=>openTaskModal(t.id)},[
@@ -649,7 +690,7 @@ function renderListView(container){
       h("td",{class:"cell-muted"},t.location||"–"),
       h("td",{},[h("span",{class:`status-badge ${sc}`},[h("span",{class:"dot"}),t.status])]),
       h("td",{class:"cell-small"},exec),
-      h("td",{class:"cell-small"},t.scheduled?.start?fmtDateTime(t.scheduled.start):"–"),
+      h("td",{class:"cell-small"},t.scheduled?.start?(t.allDay?"Hele dag":fmtDateTime(t.scheduled.start)):"–"),
       h("td",{class:"cell-small"},fmtHours(t.estimate_hours?.realistic))
     ]));
   });
@@ -691,9 +732,8 @@ function renderGanttView(container){
 
   // Filter tasks visible in this range
   const inRange=allFiltered.filter(t=>{
-    const s=new Date(t.scheduled.start);
-    const e=t.scheduled.end?new Date(t.scheduled.end):new Date(s.getTime()+36e5);
-    return e>rangeStart&&s<rangeEnd;
+    const d=taskDisplayDates(t);
+    return d&&d.e>rangeStart&&d.s<rangeEnd;
   }).sort((a,b)=>(a.scheduled.start||"").localeCompare(b.scheduled.start||""));
 
   // Group tasks by group name — include ALL groups from state even if empty
@@ -768,11 +808,13 @@ function renderGanttView(container){
       } else {
         tasks.forEach(t=>{
           const exec=[getPersonName((t.assignees||[])[0]),getPersonName((t.assignees||[])[1])].filter(x=>x!=="–").join(" + ")||"–";
+          const stCount=(t.subtasks||[]).length;
+          const stDone=(t.subtasks||[]).filter(s=>s.status==="done").length;
 
           const labelCell=document.createElement("div");
           labelCell.className="gantt-label-cell gantt-task-indent";
           labelCell.innerHTML=`
-            <div class="gantt-label-title">${escHtml(t.title)}</div>
+            <div class="gantt-label-title">${escHtml(t.title)}${stCount?` <span style="font-weight:400;font-size:11px;color:var(--text-tertiary)">(${stDone}/${stCount})</span>`:""}</div>
             <div class="gantt-label-meta">${escHtml(t.location||"–")} · ${escHtml(exec)}</div>
           `;
           grid.appendChild(labelCell);
@@ -780,8 +822,7 @@ function renderGanttView(container){
           const track=document.createElement("div");
           track.style.cssText=`grid-column:span ${cols};position:relative;height:52px;border-bottom:1px solid var(--border);`;
 
-          const s=new Date(t.scheduled.start);
-          const e=t.scheduled.end?new Date(t.scheduled.end):new Date(s.getTime()+36e5);
+          const {s,e}=taskDisplayDates(t);
           let startIdx,endIdx;
           if(state.overzicht.ganttZoom==="week"){
             startIdx=Math.max(0,(s-rangeStart)/864e5);
@@ -803,6 +844,46 @@ function renderGanttView(container){
           bar.addEventListener("click",()=>openTaskModal(t.id));
           track.appendChild(bar);
           grid.appendChild(track);
+
+          // ── Subtask rows (deeper indent) ──
+          (t.subtasks||[]).forEach(st=>{
+            if(!st.scheduled?.start) return;
+            const stS=parseDate(st.scheduled.start);
+            const stE=st.scheduled.end?parseDate(st.scheduled.end):new Date(stS.getTime()+36e5);
+            if(stE<=rangeStart||stS>=rangeEnd) return; // outside range
+
+            const stLabel=document.createElement("div");
+            stLabel.className="gantt-label-cell gantt-subtask-indent";
+            stLabel.innerHTML=`
+              <div class="gantt-label-title" style="font-weight:500;font-size:12px">${st.status==="done"?"✓ ":""}${escHtml(st.title)}</div>
+            `;
+            grid.appendChild(stLabel);
+
+            const stTrack=document.createElement("div");
+            stTrack.style.cssText=`grid-column:span ${cols};position:relative;height:36px;border-bottom:1px solid var(--border);background:var(--bg-subtle);`;
+
+            let stStartIdx,stEndIdx;
+            if(state.overzicht.ganttZoom==="week"){
+              stStartIdx=Math.max(0,(stS-rangeStart)/864e5);
+              stEndIdx=Math.min(cols,(stE-rangeStart)/864e5);
+            } else {
+              stStartIdx=Math.max(0,(new Date(stS.getFullYear(),stS.getMonth(),stS.getDate())-rangeStart)/864e5);
+              stEndIdx=Math.min(cols,Math.ceil((stE-rangeStart)/864e5));
+            }
+            if(stEndIdx<=stStartIdx) stEndIdx=stStartIdx+0.5;
+
+            const stLeft=stStartIdx*colW+4;
+            const stWidth=Math.max(20,(stEndIdx-stStartIdx)*colW-8);
+            const stSc=st.status==="done"?"done":st.status==="bezig"?"active":"backlog";
+
+            const stBar=document.createElement("div");
+            stBar.className=`gantt-bar gantt-bar-sub ${stSc}`;
+            stBar.style.cssText=`left:${stLeft}px;width:${stWidth}px;`;
+            stBar.textContent=st.title;
+            stBar.addEventListener("click",()=>openTaskModal(t.id));
+            stTrack.appendChild(stBar);
+            grid.appendChild(stTrack);
+          });
         });
       }
     }
@@ -829,15 +910,36 @@ function renderAgendaView(container){
 function getScheduledTasksByDate(rangeStart,rangeEnd){
   const filtered=getFilteredTasks().filter(t=>t.scheduled?.start);
   const byDate=new Map();
+
+  function addToDate(key, item){
+    if(!byDate.has(key)) byDate.set(key,[]);
+    byDate.get(key).push(item);
+  }
+
   filtered.forEach(t=>{
-    const s=new Date(t.scheduled.start);
-    const e=t.scheduled.end?new Date(t.scheduled.end):new Date(s.getTime()+36e5);
+    const s=parseDate(t.scheduled.start);
+    const e=t.scheduled.end?parseDate(t.scheduled.end):new Date(s.getTime()+36e5);
     if(e<=rangeStart||s>=rangeEnd) return;
     for(let d=new Date(Math.max(s,rangeStart)); d<rangeEnd&&d<e; d=addDays(d,1)){
-      const key=ymd(d);
-      if(!byDate.has(key)) byDate.set(key,[]);
-      byDate.get(key).push(t);
+      addToDate(ymd(d), t);
     }
+
+    // Include subtasks with their own schedule
+    (t.subtasks||[]).forEach(st=>{
+      if(!st.scheduled?.start) return;
+      const ss=parseDate(st.scheduled.start);
+      const se=st.scheduled.end?parseDate(st.scheduled.end):new Date(ss.getTime()+36e5);
+      if(se<=rangeStart||ss>=rangeEnd) return;
+      // Create a virtual task-like object for display
+      const virtual={
+        id:t.id, title:`↳ ${st.title}`, status:st.status==="done"?"Afgerond":"Bezig",
+        group:t.group, location:t.location, scheduled:{start:st.scheduled.start,end:st.scheduled.end},
+        _isSubtask:true, _parentTitle:t.title
+      };
+      for(let d=new Date(Math.max(ss,rangeStart)); d<rangeEnd&&d<se; d=addDays(d,1)){
+        addToDate(ymd(d), virtual);
+      }
+    });
   });
   return byDate;
 }
@@ -920,7 +1022,7 @@ function renderWeekAgenda(container){
       const d=addDays(ws,i);
       const key=ymd(d);
       const tasks=(byDate.get(key)||[]).filter(t=>{
-        const s=new Date(t.scheduled.start);
+        const s=parseDate(t.scheduled.start);
         return s.getHours()===hr;
       });
       tasks.forEach(t=>{
@@ -940,8 +1042,8 @@ function renderDayAgenda(container){
   const nextDay=addDays(fd,1);
   const tasks=getFilteredTasks().filter(t=>{
     if(!t.scheduled?.start) return false;
-    const s=new Date(t.scheduled.start);
-    const e=t.scheduled.end?new Date(t.scheduled.end):new Date(s.getTime()+36e5);
+    const s=parseDate(t.scheduled.start);
+    const e=t.scheduled.end?parseDate(t.scheduled.end):new Date(s.getTime()+36e5);
     return e>fd&&s<nextDay;
   }).sort((a,b)=>(a.scheduled.start||"").localeCompare(b.scheduled.start||""));
 
@@ -955,8 +1057,8 @@ function renderDayAgenda(container){
 
     // Place events
     tasks.forEach(t=>{
-      const s=new Date(t.scheduled.start);
-      const e=t.scheduled.end?new Date(t.scheduled.end):new Date(s.getTime()+36e5);
+      const s=parseDate(t.scheduled.start);
+      const e=t.scheduled.end?parseDate(t.scheduled.end):new Date(s.getTime()+36e5);
       if(s.getHours()!==hr||(s<fd)) return;
 
       const startMin=s.getHours()*60+s.getMinutes();
@@ -1410,6 +1512,164 @@ function renderSimpleListManager(containerId, list, stateKey){
 // ═══════════════════════════════════════════════════════════
 // TASK MODAL
 // ═══════════════════════════════════════════════════════════
+// ─── Subtask management (in-modal) ────────────────────────
+let modalSubtasks=[]; // temp copy edited in modal, written back on save
+
+function generateSubtaskId(){
+  return "st-"+Math.random().toString(36).slice(2,8);
+}
+
+function renderSubtasks(){
+  const container=$("subtasks-list");
+  if(!container) return;
+  container.innerHTML="";
+
+  if(!modalSubtasks.length){
+    container.innerHTML='<div class="subtask-empty">Nog geen subtaken. Voeg er een toe hieronder.</div>';
+    return;
+  }
+
+  modalSubtasks.forEach((st,idx)=>{
+    const card=document.createElement("div");
+    card.className="subtask-card"+(st.status==="done"?" done":"");
+    card.dataset.idx=idx;
+
+    // Checkbox
+    const check=document.createElement("div");
+    check.className="subtask-check"+(st.status==="done"?" checked":"");
+    check.innerHTML=st.status==="done"?'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>':"";
+    check.addEventListener("click",e=>{
+      e.stopPropagation();
+      st.status=st.status==="done"?"todo":"done";
+      renderSubtasks();
+    });
+
+    // Body (title + schedule)
+    const body=document.createElement("div");
+    body.className="subtask-body";
+
+    const titleInput=document.createElement("input");
+    titleInput.type="text";
+    titleInput.className="subtask-title";
+    titleInput.value=st.title;
+    titleInput.placeholder="Subtaak beschrijving...";
+    titleInput.addEventListener("input",()=>{ st.title=titleInput.value; });
+    titleInput.addEventListener("click",e=>e.stopPropagation());
+    body.appendChild(titleInput);
+
+    // Schedule row
+    const schedRow=document.createElement("div");
+    schedRow.className="subtask-schedule-row";
+
+    // All-day toggle for subtask
+    const stAllDay=document.createElement("button");
+    stAllDay.type="button";
+    stAllDay.className="subtask-cal-btn"+(st.allDay?" on":"");
+    stAllDay.textContent=st.allDay?"Hele dag":"Hele dag";
+    stAllDay.style.cssText=st.allDay?"background:var(--warning-subtle);border-color:var(--warning-subtle);color:#8B6914":"";
+    stAllDay.addEventListener("click",e=>{
+      e.stopPropagation();
+      st.allDay=!st.allDay;
+      renderSubtasks(); // re-render to swap input types
+    });
+
+    const startLabel=document.createElement("label");
+    startLabel.textContent="Start:";
+    const endLabel=document.createElement("label");
+    endLabel.textContent="Eind:";
+
+    let startInput, endInput;
+    if(st.allDay){
+      startInput=document.createElement("input");
+      startInput.type="date";
+      startInput.value=(st.scheduled?.start||"").slice(0,10);
+      startInput.addEventListener("change",()=>{ if(!st.scheduled) st.scheduled={start:"",end:""}; st.scheduled.start=startInput.value; });
+
+      endInput=document.createElement("input");
+      endInput.type="date";
+      endInput.value=(st.scheduled?.end||"").slice(0,10);
+      endInput.addEventListener("change",()=>{ if(!st.scheduled) st.scheduled={start:"",end:""}; st.scheduled.end=endInput.value; });
+    } else {
+      startInput=document.createElement("input");
+      startInput.type="datetime-local";
+      startInput.value=st.scheduled?.start||"";
+      startInput.addEventListener("change",()=>{ if(!st.scheduled) st.scheduled={start:"",end:""}; st.scheduled.start=startInput.value; });
+
+      endInput=document.createElement("input");
+      endInput.type="datetime-local";
+      endInput.value=st.scheduled?.end||"";
+      endInput.addEventListener("change",()=>{ if(!st.scheduled) st.scheduled={start:"",end:""}; st.scheduled.end=endInput.value; });
+    }
+    startInput.addEventListener("click",e=>e.stopPropagation());
+    endInput.addEventListener("click",e=>e.stopPropagation());
+
+    const calBtn=document.createElement("button");
+    calBtn.type="button";
+    calBtn.className="subtask-cal-btn"+(st.inCalendar!==false?" on":"");
+    calBtn.textContent=st.inCalendar!==false?"📅 Agenda":"Agenda";
+    calBtn.title="In iCal agenda opnemen";
+    calBtn.addEventListener("click",e=>{
+      e.stopPropagation();
+      st.inCalendar=!st.inCalendar;
+      calBtn.className="subtask-cal-btn"+(st.inCalendar?" on":"");
+      calBtn.textContent=st.inCalendar?"📅 Agenda":"Agenda";
+    });
+
+    schedRow.appendChild(stAllDay);
+    schedRow.appendChild(startLabel);
+    schedRow.appendChild(startInput);
+    schedRow.appendChild(endLabel);
+    schedRow.appendChild(endInput);
+    schedRow.appendChild(calBtn);
+    body.appendChild(schedRow);
+
+    // Actions
+    const actions=document.createElement("div");
+    actions.className="subtask-actions";
+    const del=document.createElement("button");
+    del.type="button";
+    del.className="subtask-del";
+    del.innerHTML="×";
+    del.title="Subtaak verwijderen";
+    del.addEventListener("click",e=>{
+      e.stopPropagation();
+      modalSubtasks.splice(idx,1);
+      renderSubtasks();
+    });
+    actions.appendChild(del);
+
+    card.appendChild(check);
+    card.appendChild(body);
+    card.appendChild(actions);
+    container.appendChild(card);
+  });
+}
+
+function wireSubtaskAdd(){
+  const input=$("subtask-new-title");
+  const btn=$("btn-add-subtask");
+  if(!btn||!input) return;
+
+  function addSubtask(){
+    const title=input.value.trim();
+    if(!title) return;
+    modalSubtasks.push({
+      id:generateSubtaskId(),
+      title,
+      status:"todo",
+      scheduled:{start:"",end:""},
+      inCalendar:true
+    });
+    input.value="";
+    renderSubtasks();
+    // Scroll to bottom of modal
+    input.focus();
+  }
+
+  btn.onclick=addSubtask;
+  input.onkeydown=(e)=>{ if(e.key==="Enter"){ e.preventDefault(); addSubtask(); }};
+}
+
 function openTaskModal(taskId){
   const t=state.tasks.find(x=>x.id===taskId);
   if(!t) return;
@@ -1450,6 +1710,41 @@ function openTaskModal(taskId){
   $("f-group").value=t.group||"";
   $("f-location").value=t.location||"";
   $("f-category").value=t.category||"";
+  // All-day toggle
+  const allDayBtn=$("f-allday");
+  const allDayLabel=$("f-allday-label");
+  function setAllDayMode(on){
+    allDayBtn.classList.toggle("on",on);
+    allDayLabel.textContent=on?"Ja":"Nee";
+    // Swap visible inputs
+    $("f-start").classList.toggle("hidden",on);
+    $("f-start-date").classList.toggle("hidden",!on);
+    $("f-end").classList.toggle("hidden",on);
+    $("f-end-date").classList.toggle("hidden",!on);
+  }
+  setAllDayMode(!!t.allDay);
+
+  // Populate date inputs from existing values
+  if(t.allDay){
+    $("f-start-date").value=(t.scheduled?.start||"").slice(0,10);
+    $("f-end-date").value=(t.scheduled?.end||"").slice(0,10);
+  }
+
+  allDayBtn.onclick=()=>{
+    const nowOn=!allDayBtn.classList.contains("on");
+    setAllDayMode(nowOn);
+    // Sync values between date/datetime fields
+    if(nowOn){
+      $("f-start-date").value=($("f-start").value||"").slice(0,10);
+      $("f-end-date").value=($("f-end").value||"").slice(0,10);
+    } else {
+      const sd=$("f-start-date").value;
+      const ed=$("f-end-date").value;
+      if(sd&&!$("f-start").value) $("f-start").value=sd+"T09:00";
+      if(ed&&!$("f-end").value) $("f-end").value=ed+"T17:00";
+    }
+  };
+
   $("f-start").value=t.scheduled?.start||"";
   $("f-end").value=t.scheduled?.end||"";
 
@@ -1471,8 +1766,22 @@ function openTaskModal(taskId){
   $("f-dod").value=t.definition_of_done||"";
   $("f-materials").value=materialsToText(t.materials);
   $("f-tools").value=(t.tools||[]).join("\n");
-  $("f-steps").value=(t.steps||[]).join("\n");
   $("f-notes").value=t.notes||"";
+
+  // Load subtasks — deep clone to avoid mutating state before save
+  modalSubtasks=JSON.parse(JSON.stringify(t.subtasks||[]));
+  // Migrate old steps to subtasks if subtasks empty and steps exist
+  if(!modalSubtasks.length && (t.steps||[]).length){
+    modalSubtasks=t.steps.map(s=>({
+      id:generateSubtaskId(),
+      title:s,
+      status:"todo",
+      scheduled:{start:"",end:""},
+      inCalendar:false
+    }));
+  }
+  renderSubtasks();
+  wireSubtaskAdd();
 }
 
 function populateDatalist(id, items){
@@ -1500,8 +1809,17 @@ function readTaskForm(){
   t.category=$("f-category").value.trim();
   t.status=$("f-status").value;
   t.assignees=[$("f-exec1").value,$("f-exec2").value].filter(Boolean);
-  t.scheduled.start=$("f-start").value;
-  t.scheduled.end=$("f-end").value;
+  t.allDay=$("f-allday")?.classList.contains("on")??false;
+  if(t.allDay){
+    // All-day: store as date-only strings
+    const sd=$("f-start-date").value;
+    const ed=$("f-end-date").value;
+    t.scheduled.start=sd||"";
+    t.scheduled.end=ed||"";
+  } else {
+    t.scheduled.start=$("f-start").value;
+    t.scheduled.end=$("f-end").value;
+  }
   t.inCalendar=$("f-calendar")?.classList.contains("on")??true;
   if(t.scheduled.start){
     try { t.scheduled.date=t.scheduled.start.split("T")[0]; } catch(e){}
@@ -1515,7 +1833,9 @@ function readTaskForm(){
   t.definition_of_done=$("f-dod").value;
   t.materials=parseMaterialsText($("f-materials").value);
   t.tools=parseLines($("f-tools").value);
-  t.steps=parseLines($("f-steps").value);
+  t.subtasks=JSON.parse(JSON.stringify(modalSubtasks));
+  // Keep steps as derived list of subtask titles for backward compat
+  t.steps=t.subtasks.map(st=>st.title).filter(Boolean);
   t.notes=$("f-notes").value;
   return t;
 }
@@ -1542,10 +1862,15 @@ function saveTask(){
   // Ensure end date exists when start is set
   ensureSchedule(t);
 
+  // Auto-set status to "Ingepland" when a date/time is set
+  if(t.scheduled.start && t.status==="Backlog"){
+    t.status="Ingepland";
+  }
+
   // Normalize end > start
   if(t.scheduled.start&&t.scheduled.end){
     if(new Date(t.scheduled.end)<=new Date(t.scheduled.start)){
-      const s=new Date(t.scheduled.start);
+      const s=parseDate(t.scheduled.start);
       // Default: add realistic hours, minimum 1 hour
       const hrs=Number(t.estimate_hours?.realistic)||1;
       s.setMinutes(s.getMinutes()+Math.round(hrs*60));
@@ -1604,8 +1929,10 @@ function addNewTask(){
     materials:[],
     tools:[],
     steps:[],
+    subtasks:[],
     notes:"",
-    inCalendar:true
+    inCalendar:true,
+    allDay:false
   };
   state.tasks.push(t);
   markDirty();
@@ -1620,7 +1947,11 @@ function printTask(){
   const exec2=getPersonName((t.assignees||[])[1]);
   const mats=(t.materials||[]).map(m=>`<li>${escHtml(m.item||"")}${m.qty?" — "+escHtml(m.qty):""}${m.status?" ("+escHtml(m.status)+")":""}</li>`).join("")||"<li>–</li>";
   const tools=(t.tools||[]).map(x=>`<li>${escHtml(x)}</li>`).join("")||"<li>–</li>";
-  const steps=(t.steps||[]).map((x,i)=>`<li>${escHtml(x)}</li>`).join("")||"<li>–</li>";
+  const subtaskList=(t.subtasks||[]).map(st=>{
+    const check=st.status==="done"?"✓ ":"☐ ";
+    const sched=st.scheduled?.start?` (${fmtDateTime(st.scheduled.start)})`:""  ;
+    return `<li>${check}${escHtml(st.title)}${sched}</li>`;
+  }).join("")||"<li>–</li>";
 
   $("print-sheet").innerHTML=`
     <div class="ps-header">
@@ -1632,7 +1963,7 @@ function printTask(){
       <div class="ps-box"><h4>Definition of Done</h4><p>${escHtml(t.definition_of_done||"–")}</p></div>
       <div class="ps-box"><h4>Materialen</h4><ul>${mats}</ul></div>
       <div class="ps-box"><h4>Tools</h4><ul>${tools}</ul></div>
-      <div class="ps-box ps-full"><h4>Stappenplan</h4><ol>${steps}</ol></div>
+      <div class="ps-box ps-full"><h4>Subtaken</h4><ol>${subtaskList}</ol></div>
       <div class="ps-box ps-full"><h4>Notities</h4><p>${escHtml(t.notes||"–")}</p></div>
     </div>`;
   requestAnimationFrame(()=>window.print());
@@ -1650,21 +1981,44 @@ function buildICalString(){
     const p=n=>String(n).padStart(2,"0");
     return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}T${p(d.getHours())}${p(d.getMinutes())}00`;
   };
+  const fmtDate=(dateStr)=>dateStr.replace(/-/g,"").slice(0,8);
+  const nextDay=(dateStr)=>{
+    const d=new Date(dateStr+"T00:00:00");
+    d.setDate(d.getDate()+1);
+    const p=n=>String(n).padStart(2,"0");
+    return `${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}`;
+  };
+
+  function icalDates(item){
+    if(item.allDay){
+      const sd=item.scheduled.start.slice(0,10);
+      const ed=(item.scheduled.end||item.scheduled.start).slice(0,10);
+      return `DTSTART;VALUE=DATE:${fmtDate(sd)}\r\nDTEND;VALUE=DATE:${nextDay(ed)}`;
+    }
+    const start=fmtIcal(item.scheduled.start);
+    const end=item.scheduled.end?fmtIcal(item.scheduled.end):fmtIcal(new Date(new Date(item.scheduled.start).getTime()+36e5).toISOString());
+    return `DTSTART:${start}\r\nDTEND:${end}`;
+  }
 
   let cal="BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Klusplanner Pro//NL\r\nCALSCALE:GREGORIAN\r\nMETHOD:PUBLISH\r\nX-WR-CALNAME:Klusplanner\r\n";
   scheduled.forEach(t=>{
-    const start=fmtIcal(t.scheduled.start);
-    const end=t.scheduled.end?fmtIcal(t.scheduled.end):fmtIcal(new Date(new Date(t.scheduled.start).getTime()+36e5).toISOString());
     const uid=`${t.id}@klusplanner`;
     const desc=[
       t.group?`Groep: ${t.group}`:"",
       t.definition_of_done?`DoD: ${t.definition_of_done}`:"",
-      (t.steps||[]).length?`Stappen: ${t.steps.join(", ")}`:"",
+      (t.subtasks||[]).length?`Subtaken: ${t.subtasks.map(s=>s.title).join(", ")}`:"",
       getPersonName((t.assignees||[])[0])!=="–"?`Uitvoerder: ${getPersonName((t.assignees||[])[0])}`:"",
       t.notes||""
     ].filter(Boolean).join("\\n");
 
-    cal+=`BEGIN:VEVENT\r\nUID:${uid}\r\nDTSTAMP:${fmtIcal(new Date().toISOString())}\r\nDTSTART:${start}\r\nDTEND:${end}\r\nSUMMARY:${(t.title||"").replace(/[,;\\]/g," ")}\r\nLOCATION:${(t.location||"").replace(/[,;\\]/g," ")}\r\nDESCRIPTION:${desc.replace(/[\\]/g,"\\\\").replace(/\n/g,"\\n")}\r\nSTATUS:${t.status==="Afgerond"?"COMPLETED":"CONFIRMED"}\r\nEND:VEVENT\r\n`;
+    cal+=`BEGIN:VEVENT\r\nUID:${uid}\r\nDTSTAMP:${fmtIcal(new Date().toISOString())}\r\n${icalDates(t)}\r\nSUMMARY:${(t.title||"").replace(/[,;\\]/g," ")}\r\nLOCATION:${(t.location||"").replace(/[,;\\]/g," ")}\r\nDESCRIPTION:${desc.replace(/[\\]/g,"\\\\").replace(/\n/g,"\\n")}\r\nSTATUS:${t.status==="Afgerond"?"COMPLETED":"CONFIRMED"}\r\nEND:VEVENT\r\n`;
+
+    (t.subtasks||[]).forEach(st=>{
+      if(!st.scheduled?.start||st.inCalendar===false) return;
+      const stUid=`${st.id}@klusplanner`;
+      const stDesc=`Subtaak van: ${(t.title||"").replace(/[,;\\]/g," ")}`;
+      cal+=`BEGIN:VEVENT\r\nUID:${stUid}\r\nDTSTAMP:${fmtIcal(new Date().toISOString())}\r\n${icalDates(st)}\r\nSUMMARY:${(st.title||"").replace(/[,;\\]/g," ")}\r\nLOCATION:${(t.location||"").replace(/[,;\\]/g," ")}\r\nDESCRIPTION:${stDesc}\r\nSTATUS:${st.status==="done"?"COMPLETED":"CONFIRMED"}\r\nEND:VEVENT\r\n`;
+    });
   });
   cal+="END:VCALENDAR\r\n";
   return cal;
@@ -2099,8 +2453,10 @@ function runScheduler(){
 
   state.tasks.forEach(t=>{
     if(!t.scheduled?.start) return;
-    const start=new Date(t.scheduled.start);
-    const end=t.scheduled.end?new Date(t.scheduled.end):null;
+    const start=t.allDay?new Date(t.scheduled.start+"T00:00:00"):new Date(t.scheduled.start);
+    const end=t.allDay
+      ?(t.scheduled.end?new Date(t.scheduled.end+"T23:59:59"):new Date(t.scheduled.start+"T23:59:59"))
+      :(t.scheduled.end?new Date(t.scheduled.end):null);
 
     // Auto-start: set to "Bezig" when start time is reached
     if(now>=start && (t.status==="Backlog"||t.status==="Ingepland")){
@@ -2113,6 +2469,25 @@ function runScheduler(){
     if(end && now>=end && t.status==="Bezig" && !snoozedEnds.has(t.id)){
       if(!notifyTaskId) showEndNotification(t);
     }
+
+    // ── Subtask scheduling ──
+    (t.subtasks||[]).forEach(st=>{
+      if(!st.scheduled?.start) return;
+      const stStart=new Date(st.scheduled.start);
+      const stEnd=st.scheduled.end?new Date(st.scheduled.end):null;
+
+      // Auto-start subtask
+      if(now>=stStart && st.status==="todo"){
+        st.status="bezig";
+        changed=true;
+        showBrowserNotif(`▶ Subtaak gestart: "${st.title}"`, `Onderdeel van: ${t.title}`);
+      }
+
+      // End-time notification for subtask
+      if(stEnd && now>=stEnd && st.status==="bezig" && !snoozedEnds.has(st.id)){
+        if(!notifyTaskId) showEndNotification(t, st);
+      }
+    });
   });
 
   if(changed){
@@ -2121,21 +2496,35 @@ function runScheduler(){
   }
 }
 
-function showEndNotification(t){
-  notifyTaskId=t.id;
+function showEndNotification(t, subtask){
+  // If it's a subtask notification, track the subtask id; otherwise the task id
+  const isSubtask=!!subtask;
+  const item=subtask||t;
+  const itemId=isSubtask?subtask.id:t.id;
+  notifyTaskId=itemId;
+  // Store parent task id so we can find it later
+  $("notify-modal").dataset.taskId=t.id;
+  $("notify-modal").dataset.subtaskId=isSubtask?subtask.id:"";
+
   const modal=$("notify-modal");
   const msg=$("notify-message");
   const endInput=$("notify-new-end");
+  const endTime=isSubtask?subtask.scheduled.end:t.scheduled.end;
 
-  msg.innerHTML=`<strong>${escHtml(t.title)}</strong> zou nu klaar moeten zijn.<br>
-    <span style="color:var(--text-tertiary);font-size:13px">${t.location?escHtml(t.location)+" · ":""}Eindtijd: ${fmtDateTime(t.scheduled.end)}</span>`;
+  const titleText=isSubtask?`Subtaak: ${escHtml(subtask.title)}`:`${escHtml(t.title)}`;
+  const parentInfo=isSubtask?`<br><span style="font-size:12px;color:var(--text-tertiary)">Onderdeel van: ${escHtml(t.title)}</span>`:"";
+
+  msg.innerHTML=`<strong>${titleText}</strong> zou nu klaar moeten zijn.${parentInfo}<br>
+    <span style="color:var(--text-tertiary);font-size:13px">
+      ${t.location?escHtml(t.location)+" · ":""}Eindtijd: ${fmtDateTime(endTime)}
+    </span>`;
 
   const later=new Date(Date.now()+36e5);
   const p=n=>String(n).padStart(2,"0");
   endInput.value=`${later.getFullYear()}-${p(later.getMonth()+1)}-${p(later.getDate())}T${p(later.getHours())}:${p(later.getMinutes())}`;
 
   modal.classList.remove("hidden");
-  showBrowserNotif(`⏰ "${t.title}" — eindtijd bereikt`,"Afronden of verlengen?");
+  showBrowserNotif(`⏰ "${item.title||t.title}" — eindtijd bereikt`,"Afronden of verlengen?");
 }
 
 function closeNotifyModal(){
@@ -2154,25 +2543,50 @@ function wireNotifyModal(){
     }
   });
 
+  // Helper to get the current notification target (task or subtask)
+  function getNotifyTarget(){
+    const modal=$("notify-modal");
+    const taskId=modal?.dataset.taskId;
+    const subtaskId=modal?.dataset.subtaskId;
+    const t=state.tasks.find(x=>x.id===taskId);
+    if(!t) return null;
+    if(subtaskId){
+      const st=(t.subtasks||[]).find(s=>s.id===subtaskId);
+      return { task:t, subtask:st, isSubtask:true };
+    }
+    return { task:t, subtask:null, isSubtask:false };
+  }
+
   $("notify-done")?.addEventListener("click",()=>{
-    const t=state.tasks.find(x=>x.id===notifyTaskId);
-    if(t){
-      t.status="Afgerond";
+    const target=getNotifyTarget();
+    if(target){
+      if(target.isSubtask&&target.subtask){
+        target.subtask.status="done";
+        toast(`Subtaak "${target.subtask.title}" afgerond ✓`);
+      } else {
+        target.task.status="Afgerond";
+        toast(`"${target.task.title}" afgerond ✓`);
+      }
       markDirty();
-      toast(`"${t.title}" afgerond ✓`);
       if(state.currentView==="overzicht"||state.currentView==="dashboard") switchView(state.currentView);
     }
     closeNotifyModal();
   });
 
   $("notify-extend")?.addEventListener("click",()=>{
-    const t=state.tasks.find(x=>x.id===notifyTaskId);
+    const target=getNotifyTarget();
     const newEnd=$("notify-new-end")?.value;
-    if(t&&newEnd){
-      t.scheduled.end=newEnd;
-      snoozedEnds.delete(t.id);
+    if(target&&newEnd){
+      if(target.isSubtask&&target.subtask){
+        target.subtask.scheduled.end=newEnd;
+        snoozedEnds.delete(target.subtask.id);
+        toast(`Subtaak verlengd tot ${fmtDateTime(newEnd)}`);
+      } else {
+        target.task.scheduled.end=newEnd;
+        snoozedEnds.delete(target.task.id);
+        toast(`"${target.task.title}" verlengd tot ${fmtDateTime(newEnd)}`);
+      }
       markDirty();
-      toast(`"${t.title}" verlengd tot ${fmtDateTime(newEnd)}`);
       if(state.currentView==="overzicht"||state.currentView==="dashboard") switchView(state.currentView);
     }
     closeNotifyModal();

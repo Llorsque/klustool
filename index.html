@@ -391,12 +391,23 @@
             <select id="f-exec2"></select>
           </div>
           <div class="form-field">
+            <label>Hele dag</label>
+            <div class="toggle-wrap">
+              <button type="button" class="toggle-btn" id="f-allday" title="Hele dag evenement">
+                <span class="toggle-track"><span class="toggle-thumb"></span></span>
+                <span class="toggle-label" id="f-allday-label">Nee</span>
+              </button>
+            </div>
+          </div>
+          <div class="form-field" id="f-start-wrap">
             <label>Start</label>
             <input id="f-start" type="datetime-local" />
+            <input id="f-start-date" type="date" class="hidden" />
           </div>
-          <div class="form-field">
+          <div class="form-field" id="f-end-wrap">
             <label>Eind</label>
             <input id="f-end" type="datetime-local" />
+            <input id="f-end-date" type="date" class="hidden" />
           </div>
           <div class="form-field">
             <label>In agenda</label>
@@ -436,14 +447,26 @@
             <textarea id="f-tools" rows="3" placeholder="kitspuit"></textarea>
           </div>
           <div class="form-field full">
-            <label>Stappenplan <span class="label-hint">(1 per regel)</span></label>
-            <textarea id="f-steps" rows="4" placeholder="Stap 1..."></textarea>
-          </div>
-          <div class="form-field full">
             <label>Notities</label>
             <textarea id="f-notes" rows="3" placeholder="Extra opmerkingen..."></textarea>
           </div>
         </div>
+
+        <!-- SUBTASKS SECTION -->
+        <div class="subtasks-section">
+          <div class="subtasks-header">
+            <h4>Subtaken</h4>
+            <span class="label-hint">Stappen voor of binnen de klus — elk apart in te plannen</span>
+          </div>
+          <div id="subtasks-list" class="subtasks-list">
+            <!-- Rendered by JS -->
+          </div>
+          <div class="subtask-add-row">
+            <input id="subtask-new-title" type="text" placeholder="Nieuwe subtaak toevoegen..." class="subtask-input-title" />
+            <button type="button" class="btn secondary small" id="btn-add-subtask">+ Toevoegen</button>
+          </div>
+        </div>
+
       </div>
     </div>
   </div>
