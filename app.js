@@ -145,13 +145,29 @@ function parseLines(text){ return (text||"").split("\n").map(l=>l.trim()).filter
 // ─── Schedule helper ──────────────────────────────────────
 function ensureSchedule(t){
   if(!t.scheduled||typeof t.scheduled!=="object") t.scheduled={date:"",timeblock:"",start:"",end:""};
+
+  // Migrate legacy date/timeblock → start/end
   if(!t.scheduled.start&&t.scheduled.date){
     t.scheduled.start=t.scheduled.date+"T09:00";
-    t.scheduled.end=t.scheduled.date+"T17:00";
+    if(!t.scheduled.end) t.scheduled.end=t.scheduled.date+"T17:00";
   }
+
+  // If start exists but end is missing/empty → auto-generate end
   if(t.scheduled.start&&!t.scheduled.end){
-    try { const s=new Date(t.scheduled.start); s.setHours(s.getHours()+1); const p=n=>String(n).padStart(2,"0"); t.scheduled.end=`${s.getFullYear()}-${p(s.getMonth()+1)}-${p(s.getDate())}T${p(s.getHours())}:${p(s.getMinutes())}`; } catch(e){}
+    try {
+      const s=new Date(t.scheduled.start);
+      const hrs=Number(t.estimate_hours?.realistic)||1;
+      s.setMinutes(s.getMinutes()+Math.round(hrs*60));
+      const p=n=>String(n).padStart(2,"0");
+      t.scheduled.end=`${s.getFullYear()}-${p(s.getMonth()+1)}-${p(s.getDate())}T${p(s.getHours())}:${p(s.getMinutes())}`;
+    } catch(e){}
   }
+
+  // Keep legacy date in sync
+  if(t.scheduled.start&&!t.scheduled.date){
+    try { t.scheduled.date=t.scheduled.start.split("T")[0]; } catch(e){}
+  }
+
   if(!Array.isArray(t.assignees)) t.assignees=[];
 }
 
@@ -538,7 +554,11 @@ function renderListView(container){
 
 // ─── GANTT VIEW ───────────────────────────────────────────
 function renderGanttView(container){
-  const filtered=getFilteredTasks().filter(t=>t.scheduled?.start&&t.scheduled?.end);
+  const filtered=getFilteredTasks().filter(t=>t.scheduled?.start).map(t=>{
+    // Ensure end exists for display
+    if(!t.scheduled.end) ensureSchedule(t);
+    return t;
+  });
   const fd=new Date(state.overzicht.focusDate+"T00:00:00");
 
   let rangeStart, rangeEnd, cols, colLabels;
@@ -562,7 +582,8 @@ function renderGanttView(container){
   }
 
   const items=filtered.filter(t=>{
-    const s=new Date(t.scheduled.start), e=new Date(t.scheduled.end);
+    const s=new Date(t.scheduled.start);
+    const e=t.scheduled.end?new Date(t.scheduled.end):new Date(s.getTime()+36e5);
     return e>rangeStart&&s<rangeEnd;
   }).sort((a,b)=>(a.scheduled.start||"").localeCompare(b.scheduled.start||""));
 
@@ -590,7 +611,8 @@ function renderGanttView(container){
 
     const track=h("div",{style:{gridColumn:`span ${cols}`,position:"relative",height:"52px",borderBottom:"1px solid var(--border)"}});
 
-    const s=new Date(t.scheduled.start), e=new Date(t.scheduled.end);
+    const s=new Date(t.scheduled.start);
+    const e=t.scheduled.end?new Date(t.scheduled.end):new Date(s.getTime()+36e5);
     let startIdx,endIdx;
     if(state.overzicht.ganttZoom==="week"){
       startIdx=Math.max(0,(s-rangeStart)/864e5);
@@ -1108,11 +1130,16 @@ function saveTask(){
   const t=readTaskForm();
   if(!t) { toast("Geen klus geselecteerd","warn"); return; }
 
+  // Ensure end date exists when start is set
+  ensureSchedule(t);
+
   // Normalize end > start
   if(t.scheduled.start&&t.scheduled.end){
     if(new Date(t.scheduled.end)<=new Date(t.scheduled.start)){
       const s=new Date(t.scheduled.start);
-      s.setHours(s.getHours()+1);
+      // Default: add realistic hours, minimum 1 hour
+      const hrs=Number(t.estimate_hours?.realistic)||1;
+      s.setMinutes(s.getMinutes()+Math.round(hrs*60));
       const p=n=>String(n).padStart(2,"0");
       t.scheduled.end=`${s.getFullYear()}-${p(s.getMonth()+1)}-${p(s.getDate())}T${p(s.getHours())}:${p(s.getMinutes())}`;
     }
@@ -1120,6 +1147,12 @@ function saveTask(){
 
   save();
   closeTaskModal();
+
+  // Auto-navigate calendar/gantt to show the saved task's date
+  if(t.scheduled.start){
+    try { state.overzicht.focusDate=t.scheduled.start.split("T")[0]; } catch(e){}
+  }
+
   if(state.currentView==="dashboard") renderDashboard();
   else if(state.currentView==="overzicht") renderOverzicht();
 }
@@ -1407,8 +1440,6 @@ function wireUI(){
     updateSyncIndicator("offline");
     $("app-shell").classList.add("hidden");
     $("login-screen").classList.remove("hidden");
-    $("login-card").classList.remove("hidden");
-    $("github-card").classList.add("hidden");
     $("login-user").value="";
     $("login-pass").value="";
     $("login-user").focus();
@@ -1458,14 +1489,12 @@ async function loadDefaults(){
 }
 
 // ═══════════════════════════════════════════════════════════
-// LOGIN — Two-step: user/pass → GitHub setup (if needed)
+// LOGIN — Simple user/pass → straight to app
 // ═══════════════════════════════════════════════════════════
 function wireLogin(){
-  // Enter key support on login fields
   $("login-user")?.addEventListener("keydown",e=>{ if(e.key==="Enter") $("login-pass")?.focus(); });
   $("login-pass")?.addEventListener("keydown",e=>{ if(e.key==="Enter") $("btn-login")?.click(); });
 
-  // Step 1: Username/password login
   $("btn-login")?.addEventListener("click",()=>{
     const username=$("login-user").value.trim();
     const password=$("login-pass").value;
@@ -1486,87 +1515,45 @@ function wireLogin(){
       return;
     }
 
-    // Login successful
+    // Login successful — go straight to app
     state.currentUser={ username:user.username, displayName:user.displayName, avatar:user.avatar };
     saveSession();
 
-    // Check if GitHub is already configured
+    // Load GitHub config if previously set up (from Settings)
     const savedGH=loadGHConfig();
-    if(savedGH){
-      // GitHub already set up — go straight to app
-      githubConfig=savedGH;
-      proceedToApp();
-    } else {
-      // Show GitHub setup screen
-      $("login-card").classList.add("hidden");
-      $("github-card").classList.remove("hidden");
-    }
-  });
+    if(savedGH) githubConfig=savedGH;
 
-  // Step 2a: GitHub connect
-  $("btn-gh-connect")?.addEventListener("click",async ()=>{
-    const token=$("gh-token").value.trim();
-    const owner=$("gh-owner").value.trim();
-    const repo=$("gh-repo").value.trim();
-
-    if(!token||!owner||!repo){
-      showGHError("Vul alle velden in.");
-      return;
-    }
-
-    $("btn-gh-connect").textContent="Verbinden...";
-    $("btn-gh-connect").disabled=true;
-
-    githubConfig={token,owner,repo};
-    try {
-      const valid=await ghValidate();
-      if(!valid) throw new Error("Kan repo niet bereiken. Check token en repo-gegevens.");
-      saveGHConfig();
-      await syncFromGitHub();
-      proceedToApp();
-    } catch(e){
-      githubConfig=null;
-      showGHError(e.message);
-    } finally {
-      $("btn-gh-connect").textContent="Verbinden & starten";
-      $("btn-gh-connect").disabled=false;
-    }
-  });
-
-  // Step 2b: Skip GitHub, go offline
-  $("btn-gh-skip")?.addEventListener("click",()=>{
-    githubConfig=null;
     proceedToApp();
   });
 }
 
 function proceedToApp(){
-  // Load data: GitHub first, then local fallback, then defaults
-  const tryLocal=()=>{
-    const local=loadLocal();
-    if(local){
-      state.tasks=local.tasks||[];
-      state.people=local.people||[];
-      state.groups=local.groups||[...DEFAULT_GROUPS];
-    }
-  };
-
-  if(githubConfig&&state.tasks.length===0){
-    // If sync already happened in the login flow, tasks are already loaded
-    // Otherwise load local as fallback
-    if(state.tasks.length===0) tryLocal();
+  // If GitHub connected, try sync first
+  if(githubConfig){
+    syncFromGitHub().then(synced=>{
+      if(!synced) loadLocalData();
+      startApp();
+    }).catch(()=>{
+      loadLocalData();
+      startApp();
+    });
   } else {
-    tryLocal();
+    loadLocalData();
+    if(state.tasks.length===0){
+      loadDefaults().then(()=>startApp()).catch(()=>startApp());
+    } else {
+      startApp();
+    }
   }
+}
 
-  // Last resort: load seed data
-  if(state.tasks.length===0){
-    loadDefaults().then(()=>startApp()).catch(()=>startApp());
-    return;
+function loadLocalData(){
+  const local=loadLocal();
+  if(local){
+    state.tasks=local.tasks||[];
+    state.people=local.people||[];
+    state.groups=local.groups||[...DEFAULT_GROUPS];
   }
-
-  state.tasks.forEach(t=>ensureSchedule(t));
-  startApp();
 }
 
 function showLoginError(msg){
@@ -1575,14 +1562,6 @@ function showLoginError(msg){
   el.textContent=msg;
   el.classList.remove("hidden");
   setTimeout(()=>el.classList.add("hidden"),4000);
-}
-
-function showGHError(msg){
-  const el=$("gh-error");
-  if(!el) return;
-  el.textContent=msg;
-  el.classList.remove("hidden");
-  setTimeout(()=>el.classList.add("hidden"),5000);
 }
 
 function startApp(){
@@ -1603,51 +1582,15 @@ function startApp(){
 (function init(){
   wireLogin();
 
-  // Check for existing session (user already logged in before)
+  // Check for existing session
   const savedSession=loadSession();
   if(savedSession?.username){
-    // Verify it's a valid user
     const user=USERS.find(u=>u.username===savedSession.username);
     if(user){
       state.currentUser=savedSession;
       const savedGH=loadGHConfig();
       if(savedGH) githubConfig=savedGH;
-
-      // Try sync if GitHub connected
-      if(githubConfig){
-        syncFromGitHub().then(synced=>{
-          if(!synced){
-            const local=loadLocal();
-            if(local){
-              state.tasks=local.tasks||[];
-              state.people=local.people||[];
-              state.groups=local.groups||[...DEFAULT_GROUPS];
-            }
-          }
-          startApp();
-        }).catch(()=>{
-          const local=loadLocal();
-          if(local){
-            state.tasks=local.tasks||[];
-            state.people=local.people||[];
-            state.groups=local.groups||[...DEFAULT_GROUPS];
-          }
-          startApp();
-        });
-      } else {
-        // Offline — load local
-        const local=loadLocal();
-        if(local){
-          state.tasks=local.tasks||[];
-          state.people=local.people||[];
-          state.groups=local.groups||[...DEFAULT_GROUPS];
-        }
-        if(state.tasks.length===0){
-          loadDefaults().then(()=>startApp()).catch(()=>startApp());
-        } else {
-          startApp();
-        }
-      }
+      proceedToApp();
       return;
     }
   }
