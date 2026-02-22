@@ -528,14 +528,20 @@
       "date": "2026-03-16",
       "timeblock": "",
       "start": "2026-03-16",
-      "end": "2026-03-16T01:00"
+      "end": "2026-03-20"
     },
     "dependencies": [],
     "definition_of_done": "Schuur, achterraam, brievenbus, zijkant dakkapel voor",
-    "materials": [],
+    "materials": [
+      {
+        "item": "Steiger",
+        "qty": "1",
+        "status": "Ome Jelle"
+      }
+    ],
     "tools": [],
     "steps": [],
-    "notes": "",
+    "notes": "Maandag, dinsdag vrijdag.",
     "inCalendar": true,
     "subtasks": [],
     "allDay": true
