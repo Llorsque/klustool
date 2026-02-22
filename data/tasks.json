@@ -223,15 +223,18 @@
   {
     "id": "TASK-007",
     "project": "Mesdagstraat",
-    "group": "Binnen",
-    "location": "",
+    "group": "Mesdagstraat",
+    "location": "Woonkamer",
     "type": "",
     "category": "",
     "title": "Plinten plakken",
     "priority": "",
-    "status": "Backlog",
+    "status": "Ingepland",
     "owner": "",
-    "assignees": [],
+    "assignees": [
+      "annouck",
+      "marloes"
+    ],
     "estimate_hours": {
       "optimistic": 0,
       "realistic": 0,
@@ -239,10 +242,10 @@
     },
     "actual_hours": 0,
     "scheduled": {
-      "date": "",
+      "date": "2026-03-28",
       "timeblock": "",
-      "start": "",
-      "end": ""
+      "start": "2026-03-28",
+      "end": "2026-03-28T01:00"
     },
     "dependencies": [],
     "definition_of_done": "Gehele huis.",
@@ -265,7 +268,7 @@
     "notes": "",
     "inCalendar": true,
     "subtasks": [],
-    "allDay": false
+    "allDay": true
   },
   {
     "id": "TASK-008",
