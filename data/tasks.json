@@ -903,5 +903,42 @@
     "notes": "",
     "inCalendar": true,
     "allDay": false
+  },
+  {
+    "id": "TASK-024",
+    "project": "Mesdagstraat",
+    "group": "Mesdagstraat",
+    "location": "Tuin",
+    "type": "",
+    "category": "",
+    "title": "Tuin schoonmaken",
+    "priority": "",
+    "status": "Ingepland",
+    "owner": "",
+    "assignees": [
+      "justin",
+      "willem"
+    ],
+    "estimate_hours": {
+      "optimistic": 0,
+      "realistic": 0,
+      "worst": 0
+    },
+    "actual_hours": 0,
+    "scheduled": {
+      "date": "2026-02-23",
+      "timeblock": "",
+      "start": "2026-02-23",
+      "end": "2026-02-23T01:00"
+    },
+    "dependencies": [],
+    "definition_of_done": "",
+    "materials": [],
+    "tools": [],
+    "steps": [],
+    "subtasks": [],
+    "notes": "",
+    "inCalendar": true,
+    "allDay": true
   }
 ]
