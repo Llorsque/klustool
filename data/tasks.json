@@ -866,5 +866,39 @@
     "notes": "Makelaar Duinster Melis mailen",
     "inCalendar": true,
     "allDay": false
+  },
+  {
+    "id": "TASK-023",
+    "project": "",
+    "group": "Binnen",
+    "location": "",
+    "type": "",
+    "category": "",
+    "title": "Nieuwe klus",
+    "priority": "",
+    "status": "Backlog",
+    "owner": "",
+    "assignees": [],
+    "estimate_hours": {
+      "optimistic": 0,
+      "realistic": 0,
+      "worst": 0
+    },
+    "actual_hours": 0,
+    "scheduled": {
+      "date": "",
+      "timeblock": "",
+      "start": "",
+      "end": ""
+    },
+    "dependencies": [],
+    "definition_of_done": "",
+    "materials": [],
+    "tools": [],
+    "steps": [],
+    "subtasks": [],
+    "notes": "",
+    "inCalendar": true,
+    "allDay": false
   }
 ]
