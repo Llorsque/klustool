@@ -731,16 +731,19 @@
   },
   {
     "id": "TASK-019",
-    "project": "",
-    "group": "Binnen",
+    "project": "Mesdagstraat",
+    "group": "Mesdagstraat",
     "location": "",
     "type": "",
     "category": "",
-    "title": "Nieuwe klus",
+    "title": "Dakkapel schilderen Mesdag",
     "priority": "",
-    "status": "Backlog",
+    "status": "Ingepland",
     "owner": "",
-    "assignees": [],
+    "assignees": [
+      "justin",
+      "willem"
+    ],
     "estimate_hours": {
       "optimistic": 0,
       "realistic": 0,
@@ -748,10 +751,10 @@
     },
     "actual_hours": 0,
     "scheduled": {
-      "date": "",
+      "date": "2026-04-04",
       "timeblock": "",
-      "start": "",
-      "end": ""
+      "start": "2026-04-04",
+      "end": "2026-04-04T01:00"
     },
     "dependencies": [],
     "definition_of_done": "",
@@ -761,7 +764,7 @@
     "notes": "",
     "inCalendar": true,
     "subtasks": [],
-    "allDay": false
+    "allDay": true
   },
   {
     "id": "TASK-020",
