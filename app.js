@@ -1889,6 +1889,7 @@ function saveTask(){
 
   if(state.currentView==="dashboard") renderDashboard();
   else if(state.currentView==="overzicht") renderOverzicht();
+  refreshNotifications();
 }
 
 function deleteTask(){
@@ -2435,6 +2436,238 @@ function showLoginError(msg){
 }
 
 // ═══════════════════════════════════════════════════════════
+// NOTIFICATION BELL — upcoming & action-needed alerts
+// ═══════════════════════════════════════════════════════════
+let notifications=[];
+let dismissedNotifKeys=new Set();
+
+function loadDismissed(){
+  try {
+    const raw=localStorage.getItem(STORAGE_KEY+"_dismissed");
+    if(raw){
+      const data=JSON.parse(raw);
+      // Reset dismissed daily — key includes date
+      const savedDate=data._date||"";
+      const today=new Date().toISOString().slice(0,10);
+      if(savedDate===today){
+        dismissedNotifKeys=new Set(data.keys||[]);
+      } else {
+        dismissedNotifKeys=new Set();
+      }
+    }
+  } catch(e){}
+}
+function saveDismissed(){
+  try {
+    const today=new Date().toISOString().slice(0,10);
+    localStorage.setItem(STORAGE_KEY+"_dismissed",JSON.stringify({_date:today,keys:[...dismissedNotifKeys]}));
+  } catch(e){}
+}
+
+function buildNotifications(){
+  const now=new Date();
+  const today=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  const notifs=[];
+
+  state.tasks.forEach(t=>{
+    if(!t.scheduled?.start) return;
+    if(t.status==="Afgerond") return;
+
+    const start=parseDate(t.scheduled.start);
+    const end=t.scheduled.end?parseDate(t.scheduled.end):null;
+    if(!start) return;
+
+    const daysUntilStart=Math.ceil((start-today)/(864e5));
+    const daysUntilEnd=end?Math.ceil((end-today)/(864e5)):null;
+
+    // ── 2 days before start ──
+    if(daysUntilStart===2){
+      notifs.push({
+        key:`upcoming-2d-${t.id}`,
+        icon:"📅", iconClass:"info",
+        title:`"${t.title}" begint overmorgen`,
+        desc:t.location?`Locatie: ${t.location}`:"",
+        taskId:t.id,
+        time:"Over 2 dagen",
+        priority:2
+      });
+    }
+
+    // ── 1 day before start (tomorrow) ──
+    if(daysUntilStart===1){
+      notifs.push({
+        key:`upcoming-1d-${t.id}`,
+        icon:"⏰", iconClass:"warn",
+        title:`"${t.title}" begint morgen`,
+        desc:t.location?`Locatie: ${t.location}`:"",
+        taskId:t.id,
+        time:"Morgen",
+        priority:3
+      });
+    }
+
+    // ── Starting today ──
+    if(daysUntilStart===0 && t.status==="Ingepland"){
+      notifs.push({
+        key:`today-${t.id}`,
+        icon:"🔨", iconClass:"warn",
+        title:`"${t.title}" staat vandaag gepland`,
+        desc:t.allDay?"Hele dag":`Start: ${fmtDateTime(t.scheduled.start)}`,
+        taskId:t.id,
+        time:"Vandaag",
+        priority:4
+      });
+    }
+
+    // ── Overdue: end date passed but not done ──
+    if(daysUntilEnd!==null && daysUntilEnd<0 && t.status!=="Afgerond"){
+      notifs.push({
+        key:`overdue-${t.id}`,
+        icon:"🚨", iconClass:"urgent",
+        title:`"${t.title}" is verlopen`,
+        desc:`Eindtijd was ${fmtDateTime(t.scheduled.end)}`,
+        taskId:t.id,
+        time:`${Math.abs(daysUntilEnd)} dag${Math.abs(daysUntilEnd)>1?"en":""} geleden`,
+        priority:5
+      });
+    }
+
+    // ── Materials needed (status "Wacht op materiaal") ──
+    if(t.status==="Wacht op materiaal"){
+      const missing=(t.materials||[]).filter(m=>m.status&&m.status.toLowerCase().includes("kopen")).map(m=>m.item).join(", ");
+      notifs.push({
+        key:`material-${t.id}`,
+        icon:"🛒", iconClass:"warn",
+        title:`Materiaal regelen voor "${t.title}"`,
+        desc:missing?`Nog kopen: ${missing}`:"Check materiaalllijst",
+        taskId:t.id,
+        time:"Actie nodig",
+        priority:3
+      });
+    }
+
+    // ── Waiting for help/appointment ──
+    if(t.status==="Wacht op hulp/afspraak"){
+      notifs.push({
+        key:`waiting-${t.id}`,
+        icon:"📞", iconClass:"info",
+        title:`Afspraak nodig voor "${t.title}"`,
+        desc:"Hulp of afspraak regelen",
+        taskId:t.id,
+        time:"Actie nodig",
+        priority:2
+      });
+    }
+
+    // ── Subtasks with upcoming dates ──
+    (t.subtasks||[]).forEach(st=>{
+      if(!st.scheduled?.start||st.status==="done") return;
+      const stStart=parseDate(st.scheduled.start);
+      if(!stStart) return;
+      const stDays=Math.ceil((stStart-today)/(864e5));
+
+      if(stDays>=0 && stDays<=2){
+        const when=stDays===0?"vandaag":stDays===1?"morgen":"overmorgen";
+        notifs.push({
+          key:`subtask-${st.id}`,
+          icon:"📋", iconClass:"info",
+          title:`Subtaak "${st.title}" — ${when}`,
+          desc:`Onderdeel van: ${t.title}`,
+          taskId:t.id,
+          time:when.charAt(0).toUpperCase()+when.slice(1),
+          priority:stDays===0?4:stDays===1?3:2
+        });
+      }
+    });
+  });
+
+  // Sort by priority (highest first)
+  notifs.sort((a,b)=>b.priority-a.priority);
+
+  // Filter out dismissed
+  notifications=notifs.filter(n=>!dismissedNotifKeys.has(n.key));
+}
+
+function renderNotifBadge(){
+  const badge=$("notif-badge");
+  if(!badge) return;
+  const count=notifications.length;
+  badge.textContent=count>99?"99+":count;
+  badge.classList.toggle("hidden",count===0);
+}
+
+function renderNotifPanel(){
+  const list=$("notif-list");
+  if(!list) return;
+
+  if(!notifications.length){
+    list.innerHTML='<div class="notif-empty">Geen meldingen</div>';
+    return;
+  }
+
+  list.innerHTML="";
+  notifications.forEach(n=>{
+    const item=document.createElement("div");
+    item.className="notif-item unread";
+    item.innerHTML=`
+      <div class="notif-icon ${n.iconClass}">${n.icon}</div>
+      <div class="notif-body">
+        <div class="notif-title">${escHtml(n.title)}</div>
+        <div class="notif-desc">${escHtml(n.desc)}</div>
+      </div>
+      <div class="notif-time">${escHtml(n.time)}</div>
+    `;
+    item.addEventListener("click",()=>{
+      $("notif-panel")?.classList.add("hidden");
+      openTaskModal(n.taskId);
+    });
+    list.appendChild(item);
+  });
+}
+
+function refreshNotifications(){
+  buildNotifications();
+  renderNotifBadge();
+  // Only re-render panel if it's open
+  if(!$("notif-panel")?.classList.contains("hidden")){
+    renderNotifPanel();
+  }
+}
+
+function wireNotifBell(){
+  const bell=$("btn-notif-bell");
+  const panel=$("notif-panel");
+  if(!bell||!panel) return;
+
+  bell.addEventListener("click",(e)=>{
+    e.stopPropagation();
+    const willOpen=panel.classList.contains("hidden");
+    panel.classList.toggle("hidden");
+    if(willOpen) renderNotifPanel();
+  });
+
+  // Close panel on click outside
+  document.addEventListener("click",(e)=>{
+    if(!panel.contains(e.target)&&e.target!==bell&&!bell.contains(e.target)){
+      panel.classList.add("hidden");
+    }
+  });
+
+  // Clear all
+  $("btn-notif-clear")?.addEventListener("click",(e)=>{
+    e.stopPropagation();
+    notifications.forEach(n=>dismissedNotifKeys.add(n.key));
+    saveDismissed();
+    notifications=[];
+    renderNotifBadge();
+    renderNotifPanel();
+  });
+
+  loadDismissed();
+  refreshNotifications();
+}
+
+// ═══════════════════════════════════════════════════════════
 // TASK SCHEDULER — auto-start & end-time notifications
 // ═══════════════════════════════════════════════════════════
 const snoozedEnds=new Set();
@@ -2494,6 +2727,9 @@ function runScheduler(){
     markDirty();
     if(state.currentView==="overzicht"||state.currentView==="dashboard") switchView(state.currentView);
   }
+
+  // Refresh bell notifications
+  refreshNotifications();
 }
 
 function showEndNotification(t, subtask){
@@ -2644,6 +2880,7 @@ function startApp(){
   updateSidebarUser();
   wireUI();
   wireNotifyModal();
+  wireNotifBell();
   requestNotifPermission();
   switchView("dashboard");
   startScheduler();
