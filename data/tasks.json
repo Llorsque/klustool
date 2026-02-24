@@ -118,7 +118,7 @@
       {
         "id": "st-kuccb7",
         "title": "Dichtsmeren gat met Gyproc stuc",
-        "status": "todo",
+        "status": "done",
         "scheduled": {
           "start": "2026-02-24",
           "end": "2026-02-24"
@@ -374,7 +374,7 @@
     "category": "",
     "title": "Afspraak maken Rene",
     "priority": "",
-    "status": "Bezig",
+    "status": "Afgerond",
     "owner": "",
     "assignees": [
       "justin"
@@ -857,7 +857,7 @@
     "category": "",
     "title": "Makelaar bellen",
     "priority": "",
-    "status": "Ingepland",
+    "status": "Bezig",
     "owner": "",
     "assignees": [
       "justin"
