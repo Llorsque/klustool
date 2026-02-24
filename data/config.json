@@ -1,8 +1,8 @@
 {
   "groups": [
     {
-      "id": "pre-verkoop",
-      "name": "Pre-verkoop",
+      "id": "verkoop",
+      "name": "Verkoop",
       "color": "#C5952E"
     },
     {
