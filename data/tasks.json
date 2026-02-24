@@ -866,7 +866,7 @@
     "location": "",
     "type": "",
     "category": "",
-    "title": "Makelaar bellen",
+    "title": "Makelaar mailen",
     "priority": "",
     "status": "Bezig",
     "owner": "",
@@ -882,7 +882,7 @@
     "scheduled": {
       "date": "2026-02-24",
       "timeblock": "",
-      "start": "2026-02-24T09:00",
+      "start": "2026-02-24T20:00",
       "end": "2026-02-24T20:30"
     },
     "dependencies": [],
