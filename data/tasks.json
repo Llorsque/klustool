@@ -408,16 +408,17 @@
   {
     "id": "TASK-010",
     "project": "Wielsterdyk",
-    "group": "Binnen",
+    "group": "Wielsterdyk",
     "location": "",
     "type": "",
-    "category": "",
+    "category": "Timmerwerk",
     "title": "Afspraak maken Rene",
     "priority": "",
     "status": "Afgerond",
     "owner": "",
     "assignees": [
-      "justin"
+      "justin",
+      "martje"
     ],
     "estimate_hours": {
       "optimistic": 0,
