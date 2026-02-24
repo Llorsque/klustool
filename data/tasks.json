@@ -885,8 +885,87 @@
     "definition_of_done": "",
     "materials": [],
     "tools": [],
-    "steps": [],
-    "subtasks": [],
+    "steps": [
+      "Paspoort kopieen",
+      "Pension overzichten",
+      "Studieschuld overzicht",
+      "Desktoptaxatie",
+      "Verklaring HR VMEZ over 70% regeling",
+      "Verzekeringen",
+      "Samenlevingscontract updaten bij Notaris"
+    ],
+    "subtasks": [
+      {
+        "id": "st-hsx63c",
+        "title": "Paspoort kopieen",
+        "status": "todo",
+        "scheduled": {
+          "start": "",
+          "end": ""
+        },
+        "inCalendar": false
+      },
+      {
+        "id": "st-0p4i4o",
+        "title": "Pension overzichten",
+        "status": "todo",
+        "scheduled": {
+          "start": "",
+          "end": ""
+        },
+        "inCalendar": false
+      },
+      {
+        "id": "st-8v8fvl",
+        "title": "Studieschuld overzicht",
+        "status": "todo",
+        "scheduled": {
+          "start": "",
+          "end": ""
+        },
+        "inCalendar": false
+      },
+      {
+        "id": "st-4xu05w",
+        "title": "Desktoptaxatie",
+        "status": "done",
+        "scheduled": {
+          "start": "",
+          "end": ""
+        },
+        "inCalendar": false
+      },
+      {
+        "id": "st-pocaba",
+        "title": "Verklaring HR VMEZ over 70% regeling",
+        "status": "todo",
+        "scheduled": {
+          "start": "",
+          "end": ""
+        },
+        "inCalendar": false
+      },
+      {
+        "id": "st-ktsbzh",
+        "title": "Verzekeringen",
+        "status": "todo",
+        "scheduled": {
+          "start": "",
+          "end": ""
+        },
+        "inCalendar": false
+      },
+      {
+        "id": "st-e2r9rv",
+        "title": "Samenlevingscontract updaten bij Notaris",
+        "status": "todo",
+        "scheduled": {
+          "start": "",
+          "end": ""
+        },
+        "inCalendar": false
+      }
+    ],
     "notes": "",
     "inCalendar": true,
     "allDay": false
