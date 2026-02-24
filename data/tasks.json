@@ -738,12 +738,12 @@
     "id": "TASK-017",
     "project": "Mesdagstraat",
     "group": "Mesdagstraat",
-    "location": "",
+    "location": "Keuken",
     "type": "",
     "category": "",
     "title": "Keuken afwerken",
     "priority": "",
-    "status": "Backlog",
+    "status": "Ingepland",
     "owner": "",
     "assignees": [
       "justin"
@@ -755,13 +755,13 @@
     },
     "actual_hours": 0,
     "scheduled": {
-      "date": "",
+      "date": "2026-04-04",
       "timeblock": "",
-      "start": "",
-      "end": ""
+      "start": "2026-04-04T20:23",
+      "end": "2026-04-04T21:23"
     },
     "dependencies": [],
-    "definition_of_done": "",
+    "definition_of_done": "Alles afkitten, vastzetten en afwerken.",
     "materials": [],
     "tools": [],
     "steps": [
@@ -769,7 +769,18 @@
     ],
     "notes": "",
     "inCalendar": true,
-    "subtasks": [],
+    "subtasks": [
+      {
+        "id": "st-fngfsm",
+        "title": "Plint, Afkitten",
+        "status": "todo",
+        "scheduled": {
+          "start": "",
+          "end": ""
+        },
+        "inCalendar": false
+      }
+    ],
     "allDay": false
   },
   {
