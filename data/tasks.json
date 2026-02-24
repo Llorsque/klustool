@@ -476,16 +476,18 @@
   },
   {
     "id": "TASK-011",
-    "project": "",
-    "group": "Binnen",
-    "location": "",
+    "project": "Wielsterdyk",
+    "group": "Wielsterdyk",
+    "location": "Slaapkamer",
     "type": "",
     "category": "",
     "title": "Vergunning dakkapel",
     "priority": "",
     "status": "Backlog",
     "owner": "",
-    "assignees": [],
+    "assignees": [
+      "justin"
+    ],
     "estimate_hours": {
       "optimistic": 0,
       "realistic": 0,
@@ -502,19 +504,43 @@
     "definition_of_done": "",
     "materials": [],
     "tools": [],
-    "steps": [],
+    "steps": [
+      "Technische tekeningen maken Martje",
+      "Plan met Rene bespreken"
+    ],
     "notes": "",
     "inCalendar": true,
-    "subtasks": [],
+    "subtasks": [
+      {
+        "id": "st-by2cs4",
+        "title": "Technische tekeningen maken Martje",
+        "status": "todo",
+        "scheduled": {
+          "start": "",
+          "end": ""
+        },
+        "inCalendar": false
+      },
+      {
+        "id": "st-pjpdnw",
+        "title": "Plan met Rene bespreken",
+        "status": "todo",
+        "scheduled": {
+          "start": "",
+          "end": ""
+        },
+        "inCalendar": false
+      }
+    ],
     "allDay": false
   },
   {
     "id": "TASK-012",
     "project": "Mesdagstraat",
-    "group": "Binnen",
-    "location": "",
+    "group": "Mesdagstraat",
+    "location": "Overloop",
     "type": "",
-    "category": "",
+    "category": "Schilderwerk",
     "title": "Wasmachine meubel afmaken",
     "priority": "",
     "status": "Backlog",
@@ -591,7 +617,7 @@
     "id": "TASK-015",
     "project": "Mesdagstraat",
     "group": "Mesdagstraat",
-    "location": "",
+    "location": "Badkamer",
     "type": "",
     "category": "",
     "title": "Erker afmaken",
@@ -809,8 +835,8 @@
   },
   {
     "id": "TASK-021",
-    "project": "",
-    "group": "Binnen",
+    "project": "Mesdagstraat",
+    "group": "Pre-verkoop",
     "location": "",
     "type": "",
     "category": "",
