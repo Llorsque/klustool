@@ -94,10 +94,10 @@
     },
     "actual_hours": 0,
     "scheduled": {
-      "date": "2026-02-27",
+      "date": "2026-03-02",
       "timeblock": "",
-      "start": "2026-02-27",
-      "end": "2026-02-27T01:00"
+      "start": "2026-03-02T18:00",
+      "end": "2026-03-02T21:00"
     },
     "dependencies": [],
     "definition_of_done": "",
@@ -111,7 +111,8 @@
     "tools": [],
     "steps": [
       "Dichtsmeren gat met Gyproc stuc",
-      "Dichtsmeren ronde 2"
+      "Dichtsmeren ronde 2",
+      "Dichtsmeren ronde 3"
     ],
     "notes": "",
     "inCalendar": true,
@@ -132,13 +133,25 @@
         "title": "Dichtsmeren ronde 2",
         "status": "todo",
         "scheduled": {
-          "start": "",
-          "end": ""
+          "start": "2026-02-25",
+          "end": "2026-02-25"
         },
-        "inCalendar": false
+        "inCalendar": false,
+        "allDay": true
+      },
+      {
+        "id": "st-vwegyb",
+        "title": "Dichtsmeren ronde 3",
+        "status": "todo",
+        "scheduled": {
+          "start": "2026-02-27",
+          "end": "2026-02-27"
+        },
+        "inCalendar": false,
+        "allDay": true
       }
     ],
-    "allDay": true
+    "allDay": false
   },
   {
     "id": "TASK-004",
