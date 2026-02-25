@@ -131,10 +131,10 @@
       {
         "id": "st-5ghsqp",
         "title": "Dichtsmeren ronde 2",
-        "status": "todo",
+        "status": "bezig",
         "scheduled": {
           "start": "2026-02-25",
-          "end": "2026-02-25"
+          "end": "2026-02-25T17:00"
         },
         "inCalendar": false,
         "allDay": true
@@ -408,17 +408,16 @@
   {
     "id": "TASK-010",
     "project": "Wielsterdyk",
-    "group": "Wielsterdyk",
+    "group": "Binnen",
     "location": "",
     "type": "",
-    "category": "Timmerwerk",
+    "category": "",
     "title": "Afspraak maken Rene",
     "priority": "",
     "status": "Afgerond",
     "owner": "",
     "assignees": [
-      "justin",
-      "martje"
+      "justin"
     ],
     "estimate_hours": {
       "optimistic": 0,
@@ -700,11 +699,11 @@
   },
   {
     "id": "TASK-016",
-    "project": "Mesdagstraat",
-    "group": "Mesdagstraat",
+    "project": "",
+    "group": "Binnen",
     "location": "",
     "type": "",
-    "category": "Schoonmaak",
+    "category": "",
     "title": "Schoonmaak",
     "priority": "",
     "status": "Ingepland",
@@ -739,12 +738,12 @@
     "id": "TASK-017",
     "project": "Mesdagstraat",
     "group": "Mesdagstraat",
-    "location": "Keuken",
+    "location": "",
     "type": "",
     "category": "",
     "title": "Keuken afwerken",
     "priority": "",
-    "status": "Ingepland",
+    "status": "Backlog",
     "owner": "",
     "assignees": [
       "justin"
@@ -756,13 +755,13 @@
     },
     "actual_hours": 0,
     "scheduled": {
-      "date": "2026-04-04",
+      "date": "",
       "timeblock": "",
-      "start": "2026-04-04T20:23",
-      "end": "2026-04-04T21:23"
+      "start": "",
+      "end": ""
     },
     "dependencies": [],
-    "definition_of_done": "Alles afkitten, vastzetten en afwerken.",
+    "definition_of_done": "",
     "materials": [],
     "tools": [],
     "steps": [
@@ -770,18 +769,7 @@
     ],
     "notes": "",
     "inCalendar": true,
-    "subtasks": [
-      {
-        "id": "st-fngfsm",
-        "title": "Plint, Afkitten",
-        "status": "todo",
-        "scheduled": {
-          "start": "",
-          "end": ""
-        },
-        "inCalendar": false
-      }
-    ],
+    "subtasks": [],
     "allDay": false
   },
   {
@@ -886,87 +874,8 @@
     "definition_of_done": "",
     "materials": [],
     "tools": [],
-    "steps": [
-      "Paspoort kopieen",
-      "Pension overzichten",
-      "Studieschuld overzicht",
-      "Desktoptaxatie",
-      "Verklaring HR VMEZ over 70% regeling",
-      "Verzekeringen",
-      "Samenlevingscontract updaten bij Notaris"
-    ],
-    "subtasks": [
-      {
-        "id": "st-hsx63c",
-        "title": "Paspoort kopieen",
-        "status": "todo",
-        "scheduled": {
-          "start": "",
-          "end": ""
-        },
-        "inCalendar": false
-      },
-      {
-        "id": "st-0p4i4o",
-        "title": "Pension overzichten",
-        "status": "todo",
-        "scheduled": {
-          "start": "",
-          "end": ""
-        },
-        "inCalendar": false
-      },
-      {
-        "id": "st-8v8fvl",
-        "title": "Studieschuld overzicht",
-        "status": "todo",
-        "scheduled": {
-          "start": "",
-          "end": ""
-        },
-        "inCalendar": false
-      },
-      {
-        "id": "st-4xu05w",
-        "title": "Desktoptaxatie",
-        "status": "done",
-        "scheduled": {
-          "start": "",
-          "end": ""
-        },
-        "inCalendar": false
-      },
-      {
-        "id": "st-pocaba",
-        "title": "Verklaring HR VMEZ over 70% regeling",
-        "status": "todo",
-        "scheduled": {
-          "start": "",
-          "end": ""
-        },
-        "inCalendar": false
-      },
-      {
-        "id": "st-ktsbzh",
-        "title": "Verzekeringen",
-        "status": "todo",
-        "scheduled": {
-          "start": "",
-          "end": ""
-        },
-        "inCalendar": false
-      },
-      {
-        "id": "st-e2r9rv",
-        "title": "Samenlevingscontract updaten bij Notaris",
-        "status": "todo",
-        "scheduled": {
-          "start": "",
-          "end": ""
-        },
-        "inCalendar": false
-      }
-    ],
+    "steps": [],
+    "subtasks": [],
     "notes": "",
     "inCalendar": true,
     "allDay": false
@@ -995,7 +904,7 @@
       "date": "2026-02-24",
       "timeblock": "",
       "start": "2026-02-24T20:00",
-      "end": "2026-02-24T20:30"
+      "end": "2026-02-26T21:30"
     },
     "dependencies": [],
     "definition_of_done": "",
@@ -1020,7 +929,7 @@
     "owner": "",
     "assignees": [
       "justin",
-      "martje"
+      "willem"
     ],
     "estimate_hours": {
       "optimistic": 0,
@@ -1029,10 +938,10 @@
     },
     "actual_hours": 0,
     "scheduled": {
-      "date": "2026-03-29",
+      "date": "2026-02-23",
       "timeblock": "",
-      "start": "2026-03-29",
-      "end": "2026-03-29T01:00"
+      "start": "2026-02-23",
+      "end": "2026-02-23T01:00"
     },
     "dependencies": [],
     "definition_of_done": "",
