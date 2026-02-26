@@ -952,5 +952,74 @@
     "notes": "",
     "inCalendar": true,
     "allDay": true
+  },
+  {
+    "id": "TASK-020",
+    "project": "Wielsterdyk",
+    "group": "Wielsterdyk",
+    "location": "Woonkamer",
+    "type": "",
+    "category": "",
+    "title": "Stroom en internetplan maken",
+    "priority": "",
+    "status": "Backlog",
+    "owner": "",
+    "assignees": [],
+    "estimate_hours": {
+      "optimistic": 0,
+      "realistic": 0,
+      "worst": 0
+    },
+    "actual_hours": 0,
+    "scheduled": {
+      "date": "",
+      "timeblock": "",
+      "start": "",
+      "end": ""
+    },
+    "dependencies": [],
+    "definition_of_done": "",
+    "materials": [],
+    "tools": [],
+    "steps": [
+      "Stroomplan bedenken.",
+      "Internetplan uitdenken",
+      "Providers uitzoeken"
+    ],
+    "subtasks": [
+      {
+        "id": "st-2vp9p2",
+        "title": "Stroomplan bedenken.",
+        "status": "todo",
+        "scheduled": {
+          "start": "",
+          "end": ""
+        },
+        "inCalendar": false
+      },
+      {
+        "id": "st-2gerxf",
+        "title": "Internetplan uitdenken",
+        "status": "todo",
+        "scheduled": {
+          "start": "",
+          "end": ""
+        },
+        "inCalendar": false
+      },
+      {
+        "id": "st-1j65u1",
+        "title": "Providers uitzoeken",
+        "status": "todo",
+        "scheduled": {
+          "start": "",
+          "end": ""
+        },
+        "inCalendar": false
+      }
+    ],
+    "notes": "Aansluiten van mantelzorg woning op stroom, water en internet",
+    "inCalendar": false,
+    "allDay": false
   }
 ]
