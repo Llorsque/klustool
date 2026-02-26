@@ -925,7 +925,7 @@
     "category": "",
     "title": "Tuin schoonmaken",
     "priority": "",
-    "status": "Bezig",
+    "status": "Ingepland",
     "owner": "",
     "assignees": [
       "justin",
@@ -940,8 +940,8 @@
     "scheduled": {
       "date": "2026-02-23",
       "timeblock": "",
-      "start": "2026-02-23",
-      "end": "2026-02-23T01:00"
+      "start": "2026-02-23T09:00",
+      "end": "2026-02-23T17:00"
     },
     "dependencies": [],
     "definition_of_done": "",
@@ -950,8 +950,8 @@
     "steps": [],
     "subtasks": [],
     "notes": "",
-    "inCalendar": true,
-    "allDay": true
+    "inCalendar": false,
+    "allDay": false
   },
   {
     "id": "TASK-020",
