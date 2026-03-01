@@ -19,6 +19,11 @@
       "id": "mesdagstraat",
       "name": "Mesdagstraat",
       "color": "#4A8C9F"
+    },
+    {
+      "id": "binnen",
+      "name": "Binnen",
+      "color": "#DC6B3F"
     }
   ],
   "statuses": [
