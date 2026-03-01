@@ -193,7 +193,7 @@
   {
     "id": "TASK-005",
     "project": "Mesdagstraat",
-    "group": "Binnen",
+    "group": "Mesdagstraat",
     "location": "Woonkamer",
     "type": "",
     "category": "Schilderwerk",
@@ -201,7 +201,10 @@
     "priority": "",
     "status": "Ingepland",
     "owner": "",
-    "assignees": [],
+    "assignees": [
+      "martje",
+      "justin"
+    ],
     "estimate_hours": {
       "optimistic": 0,
       "realistic": 0,
@@ -209,10 +212,10 @@
     },
     "actual_hours": 0,
     "scheduled": {
-      "date": "",
+      "date": "2026-04-11",
       "timeblock": "",
-      "start": "",
-      "end": ""
+      "start": "2026-04-11",
+      "end": "2026-04-12"
     },
     "dependencies": [],
     "definition_of_done": "Woonkamer en badkamer",
@@ -222,7 +225,7 @@
     "notes": "",
     "inCalendar": true,
     "subtasks": [],
-    "allDay": false
+    "allDay": true
   },
   {
     "id": "TASK-006",
