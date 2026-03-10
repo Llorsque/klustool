@@ -1086,5 +1086,118 @@
     "notes": "",
     "inCalendar": true,
     "allDay": true
+  },
+  {
+    "id": "TASK-025",
+    "project": "Mesdagstraat",
+    "group": "Mesdagstraat",
+    "location": "",
+    "type": "",
+    "category": "",
+    "title": "Makelaar zaken regelen",
+    "priority": "",
+    "status": "Backlog",
+    "owner": "",
+    "assignees": [],
+    "estimate_hours": {
+      "optimistic": 0,
+      "realistic": 0,
+      "worst": 0
+    },
+    "actual_hours": 0,
+    "scheduled": {
+      "date": "",
+      "timeblock": "",
+      "start": "",
+      "end": ""
+    },
+    "dependencies": [],
+    "definition_of_done": "",
+    "materials": [],
+    "tools": [],
+    "steps": [
+      "MoveNl account activere",
+      "Vragenlijst moveNL",
+      "Lijst van materialen die overblijven",
+      "Legitimatie",
+      "Getekende opdracht",
+      "WWFT document invullen",
+      "Energielabel uploaden"
+    ],
+    "subtasks": [
+      {
+        "id": "st-rlcs7r",
+        "title": "MoveNl account activere",
+        "status": "todo",
+        "scheduled": {
+          "start": "",
+          "end": ""
+        },
+        "inCalendar": false
+      },
+      {
+        "id": "st-lgy9g6",
+        "title": "Vragenlijst moveNL",
+        "status": "todo",
+        "scheduled": {
+          "start": "",
+          "end": ""
+        },
+        "inCalendar": false
+      },
+      {
+        "id": "st-upgow8",
+        "title": "Lijst van materialen die overblijven",
+        "status": "todo",
+        "scheduled": {
+          "start": "",
+          "end": ""
+        },
+        "inCalendar": false
+      },
+      {
+        "id": "st-45kfls",
+        "title": "Legitimatie",
+        "status": "todo",
+        "scheduled": {
+          "start": "",
+          "end": ""
+        },
+        "inCalendar": false
+      },
+      {
+        "id": "st-gq26tb",
+        "title": "Getekende opdracht",
+        "status": "todo",
+        "scheduled": {
+          "start": "",
+          "end": ""
+        },
+        "inCalendar": false
+      },
+      {
+        "id": "st-pdmo07",
+        "title": "WWFT document invullen",
+        "status": "todo",
+        "scheduled": {
+          "start": "",
+          "end": ""
+        },
+        "inCalendar": false
+      },
+      {
+        "id": "st-0byo7z",
+        "title": "Energielabel uploaden",
+        "status": "todo",
+        "scheduled": {
+          "start": "",
+          "end": ""
+        },
+        "inCalendar": false
+      }
+    ],
+    "notes": "",
+    "inCalendar": false,
+    "allDay": false
   }
 ]
