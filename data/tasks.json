@@ -365,15 +365,26 @@
     ],
     "tools": [],
     "steps": [
-      "Hondjes"
+      "Hondjes",
+      "Bus van Guido geregeld"
     ],
-    "notes": "Hulp van Ian, Rutger, Redmer",
+    "notes": "Hulp van Ian, Guido, Redmer",
     "inCalendar": true,
     "subtasks": [
       {
         "id": "st-5zms5e",
         "title": "Hondjes",
         "status": "todo",
+        "scheduled": {
+          "start": "",
+          "end": ""
+        },
+        "inCalendar": false
+      },
+      {
+        "id": "st-pjoo7u",
+        "title": "Bus van Guido geregeld",
+        "status": "done",
         "scheduled": {
           "start": "",
           "end": ""
