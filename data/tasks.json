@@ -570,7 +570,7 @@
     "category": "Schilderwerk",
     "title": "Wasmachine meubel afmaken",
     "priority": "",
-    "status": "Ingepland",
+    "status": "Bezig",
     "owner": "",
     "assignees": [
       "justin",
@@ -613,7 +613,7 @@
     "category": "Schilderwerk",
     "title": "Kozijnen - buiten",
     "priority": "",
-    "status": "Ingepland",
+    "status": "Bezig",
     "owner": "",
     "assignees": [
       "willem",
@@ -1062,7 +1062,7 @@
     "category": "",
     "title": "Zolder opruimen",
     "priority": "",
-    "status": "Ingepland",
+    "status": "Afgerond",
     "owner": "",
     "assignees": [],
     "estimate_hours": {
