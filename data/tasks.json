@@ -437,7 +437,7 @@
     "location": "",
     "type": "",
     "category": "",
-    "title": "Afspraak maken Rene",
+    "title": "Afspraak Rene Dakkapel",
     "priority": "",
     "status": "Afgerond",
     "owner": "",
@@ -451,10 +451,10 @@
     },
     "actual_hours": 0,
     "scheduled": {
-      "date": "2026-02-23",
+      "date": "2026-04-02",
       "timeblock": "",
-      "start": "2026-02-23T09:00",
-      "end": "2026-02-23T09:30"
+      "start": "2026-04-02T19:00",
+      "end": "2026-04-02T21:30"
     },
     "dependencies": [],
     "definition_of_done": "",
