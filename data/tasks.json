@@ -286,7 +286,7 @@
     "category": "",
     "title": "Plinten plakken",
     "priority": "",
-    "status": "Bezig",
+    "status": "Afgerond",
     "owner": "",
     "assignees": [
       "annouck",
@@ -1302,6 +1302,42 @@
       "timeblock": "",
       "start": "",
       "end": ""
+    },
+    "dependencies": [],
+    "definition_of_done": "",
+    "materials": [],
+    "tools": [],
+    "steps": [],
+    "subtasks": [],
+    "notes": "",
+    "inCalendar": true,
+    "allDay": false
+  },
+  {
+    "id": "TASK-029",
+    "project": "Mesdagstraat",
+    "group": "Mesdagstraat",
+    "location": "",
+    "type": "",
+    "category": "",
+    "title": "Plinten boven",
+    "priority": "",
+    "status": "Ingepland",
+    "owner": "",
+    "assignees": [
+      "marloes"
+    ],
+    "estimate_hours": {
+      "optimistic": 0,
+      "realistic": 0,
+      "worst": 0
+    },
+    "actual_hours": 0,
+    "scheduled": {
+      "date": "2026-04-04",
+      "timeblock": "",
+      "start": "2026-04-04T13:00",
+      "end": "2026-04-04T16:00"
     },
     "dependencies": [],
     "definition_of_done": "",
