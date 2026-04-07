@@ -68,6 +68,18 @@
         "name": "Aanleg infra mantelzorg",
         "budget": 5000,
         "color": "#e07a5f"
+      },
+      {
+        "id": "b-dkmzsnd",
+        "name": "Installatiewerk Dijkstra",
+        "budget": 20000,
+        "color": "#3d405b"
+      },
+      {
+        "id": "b-f4cv57g",
+        "name": "Dakkapel",
+        "budget": 18000,
+        "color": "#81b29a"
       }
     ],
     "items": [],
