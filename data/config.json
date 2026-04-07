@@ -80,9 +80,25 @@
         "name": "Dakkapel",
         "budget": 18000,
         "color": "#81b29a"
+      },
+      {
+        "id": "b-kupa7ul",
+        "name": "Bovenverdieping",
+        "budget": 0,
+        "color": "#f2cc8f"
       }
     ],
-    "items": [],
+    "items": [
+      {
+        "id": "b-j0bmf5a",
+        "projectId": "b-kupa7ul",
+        "name": "Infra",
+        "description": "Elektramat",
+        "amount": 0,
+        "status": "gepland",
+        "url": ""
+      }
+    ],
     "invoices": []
   }
 }
