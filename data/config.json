@@ -60,5 +60,17 @@
     "Mesdagstraat",
     "Wielsterdyk",
     "Mantelzorgwoning"
-  ]
+  ],
+  "budget": {
+    "projects": [
+      {
+        "id": "b-91dlm97",
+        "name": "Aanleg infra mantelzorg",
+        "budget": 5000,
+        "color": "#e07a5f"
+      }
+    ],
+    "items": [],
+    "invoices": []
+  }
 }
