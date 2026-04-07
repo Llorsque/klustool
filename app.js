@@ -44,6 +44,8 @@ let state = {
   locations: [...DEFAULT_LOCATIONS],
   categories: [...DEFAULT_CATEGORIES],
   projects: [...DEFAULT_PROJECTS],
+  budget: { projects:[], items:[], invoices:[] },
+  budgetView: "b-dashboard",
   selectedTaskId: null,
   currentView: "dashboard",
   currentUser: null,
@@ -308,6 +310,7 @@ async function syncFromGitHub(silent){
       if(c.locations?.length) state.locations=c.locations;
       if(c.categories?.length) state.categories=c.categories;
       if(c.projects) state.projects=c.projects;
+      if(c.budget) state.budget=c.budget;
       configSha=cd.sha;
     }
 
@@ -335,7 +338,8 @@ async function syncToGitHub(){
 
     const cfg={
       groups:state.groups, statuses:state.statuses,
-      locations:state.locations, categories:state.categories, projects:state.projects
+      locations:state.locations, categories:state.categories, projects:state.projects,
+    budget:state.budget
     };
 
     // Write one at a time — parallel commits cause 409 conflicts
@@ -372,7 +376,8 @@ function updateSyncIndicator(status){
 function saveLocal(){
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify({
     tasks:state.tasks, people:state.people, groups:state.groups,
-    statuses:state.statuses, locations:state.locations, categories:state.categories, projects:state.projects
+    statuses:state.statuses, locations:state.locations, categories:state.categories, projects:state.projects,
+    budget:state.budget
   })); } catch(e){}
 }
 function loadLocal(){
@@ -397,7 +402,8 @@ function loadSession(){
 function takeSnapshot(){
   cleanSnapshot=JSON.stringify({
     tasks:state.tasks, people:state.people, groups:state.groups,
-    statuses:state.statuses, locations:state.locations, categories:state.categories, projects:state.projects
+    statuses:state.statuses, locations:state.locations, categories:state.categories, projects:state.projects,
+    budget:state.budget
   });
 }
 
@@ -440,6 +446,7 @@ function discardChanges(){
     state.locations=snap.locations||[...DEFAULT_LOCATIONS];
     state.categories=snap.categories||[...DEFAULT_CATEGORIES];
     state.projects=snap.projects||[...DEFAULT_PROJECTS];
+    state.budget=snap.budget||{projects:[],items:[],invoices:[]};
     state.tasks.forEach(t=>ensureSchedule(t));
   } catch(e){ return; }
 
@@ -459,7 +466,7 @@ function switchView(view){
   $$(".view").forEach(v=>v.classList.add("hidden"));
   $(`view-${view}`)?.classList.remove("hidden");
 
-  const titles={dashboard:"Dashboard",overzicht:"Overzicht",materials:"Materialen",people:"Personen",settings:"Instellingen"};
+  const titles={dashboard:"Dashboard",overzicht:"Overzicht",materials:"Materialen",people:"Personen",settings:"Instellingen",budget:"Budget"};
   $("page-title").textContent=titles[view]||view;
 
   if(view==="dashboard") renderDashboard();
@@ -467,6 +474,7 @@ function switchView(view){
   else if(view==="materials") renderMaterials();
   else if(view==="people") renderPeople();
   else if(view==="settings") renderSettings();
+  else if(view==="budget") renderBudget();
 
   // close mobile sidebar
   $("sidebar")?.classList.remove("open");
@@ -493,6 +501,12 @@ function renderDashboard(){
     { label:"Blokkades", value:String(blocked), sub:"Wacht op materiaal / hulp", bar:0 },
     { label:"Ingepland", value:String(scheduled), sub:"Klussen met datum", bar:0 }
   ];
+  // Budget KPI
+  if(state.budget.projects.length){
+    const bs=bStats();
+    const budgetPct=bs.totalBudget>0?Math.min(100,Math.round(bs.totalInvoiced/bs.totalBudget*100)):0;
+    cards.push({ label:"Budget", value:bFmt(bs.remaining), sub:`${bFmt(bs.totalInvoiced)} / ${bFmt(bs.totalBudget)}`, bar:budgetPct, barColor:budgetPct>90?"var(--danger)":"#e07a5f" });
+  }
   cards.forEach(c=>{
     const card=h("div",{class:"kpi-card"},[
       h("div",{class:"kpi-label"},c.label),
@@ -1971,6 +1985,491 @@ function printTask(){
 }
 
 // ═══════════════════════════════════════════════════════════
+// BUDGET MODULE
+// ═══════════════════════════════════════════════════════════
+const BUDGET_COLORS=["#e07a5f","#3d405b","#81b29a","#f2cc8f","#6a994e","#bc4749","#5a7d9a","#d4a373","#9b5de5","#00bbf9"];
+const BUDGET_STATUSES={
+  gepland:   {label:"Gepland",   color:"#94a3b8",bg:"#f1f5f9"},
+  besteld:   {label:"Besteld",   color:"#f59e0b",bg:"#fef3c7"},
+  ontvangen: {label:"Ontvangen", color:"#3b82f6",bg:"#dbeafe"},
+  betaald:   {label:"Betaald",   color:"#22c55e",bg:"#dcfce7"}
+};
+
+function bFmt(n){ return new Intl.NumberFormat("nl-NL",{style:"currency",currency:"EUR"}).format(n||0); }
+function bUid(){ return "b-"+Math.random().toString(36).slice(2,9); }
+function bToday(){ return new Date().toISOString().slice(0,10); }
+
+function bStats(){
+  const b=state.budget;
+  const totalBudget=b.projects.reduce((s,p)=>s+(p.budget||0),0);
+  const totalEstimated=b.items.reduce((s,i)=>s+(i.amount||0),0);
+  const totalInvoiced=b.invoices.reduce((s,i)=>s+(i.amount||0),0);
+  const totalPaid=b.invoices.filter(i=>i.paid).reduce((s,i)=>s+(i.amount||0),0);
+  return {totalBudget,totalEstimated,totalInvoiced,totalPaid,totalUnpaid:totalInvoiced-totalPaid,remaining:totalBudget-totalInvoiced};
+}
+
+function bProjectStats(pid){
+  const b=state.budget;
+  const p=b.projects.find(x=>x.id===pid);
+  const budget=p?.budget||0;
+  const estimated=b.items.filter(i=>i.projectId===pid).reduce((s,i)=>s+(i.amount||0),0);
+  const invoiced=b.invoices.filter(i=>i.projectId===pid).reduce((s,i)=>s+(i.amount||0),0);
+  const paid=b.invoices.filter(i=>i.projectId===pid&&i.paid).reduce((s,i)=>s+(i.amount||0),0);
+  const pct=budget>0?Math.min(100,(invoiced/budget)*100):0;
+  return {budget,estimated,invoiced,paid,remaining:budget-invoiced,pct};
+}
+
+function renderBudget(){
+  const container=$("budget-content");
+  if(!container) return;
+
+  // Wire tabs
+  $$(".budget-tab").forEach(tab=>{
+    tab.classList.toggle("active",tab.dataset.btab===state.budgetView);
+    tab.onclick=()=>{
+      state.budgetView=tab.dataset.btab;
+      $$(".budget-tab").forEach(t=>t.classList.toggle("active",t.dataset.btab===state.budgetView));
+      renderBudget();
+    };
+  });
+
+  if(state.budgetView==="b-dashboard") renderBudgetDashboard(container);
+  else if(state.budgetView==="b-projects") renderBudgetProjects(container);
+  else if(state.budgetView==="b-invoices") renderBudgetInvoices(container);
+  else if(state.budgetView==="b-items") renderBudgetItems(container);
+  else if(state.budgetView.startsWith("b-project:")) renderBudgetProjectDetail(container,state.budgetView.split(":")[1]);
+}
+
+// ─── Budget Dashboard ────────────────────────────────────
+function renderBudgetDashboard(container){
+  const s=bStats();
+  const b=state.budget;
+  const overBudget=s.remaining<0;
+
+  let html=`<div class="budget-kpi-grid">
+    <div class="budget-kpi"><div class="budget-kpi-label">Totaal budget</div><div class="budget-kpi-value" style="color:#3d405b">${bFmt(s.totalBudget)}</div></div>
+    <div class="budget-kpi"><div class="budget-kpi-label">Gefactureerd</div><div class="budget-kpi-value" style="color:#e07a5f">${bFmt(s.totalInvoiced)}</div></div>
+    <div class="budget-kpi"><div class="budget-kpi-label">Betaald</div><div class="budget-kpi-value" style="color:#22c55e">${bFmt(s.totalPaid)}</div></div>
+    <div class="budget-kpi"><div class="budget-kpi-label">Openstaand</div><div class="budget-kpi-value" style="color:#f59e0b">${bFmt(s.totalUnpaid)}</div></div>
+    <div class="budget-kpi"><div class="budget-kpi-label">Resterend</div><div class="budget-kpi-value" style="color:${overBudget?"var(--danger)":"#3b82f6"}">${bFmt(s.remaining)}</div>${overBudget?'<div class="budget-kpi-alert">⚠ Over budget!</div>':''}</div>
+    <div class="budget-kpi"><div class="budget-kpi-label">Ingeschat</div><div class="budget-kpi-value" style="color:#9b5de5">${bFmt(s.totalEstimated)}</div></div>
+  </div>`;
+
+  if(b.projects.length){
+    html+=`<div class="panel"><h3 style="margin:0 0 14px">Budget per project</h3>`;
+    b.projects.forEach(p=>{
+      const ps=bProjectStats(p.id);
+      const barColor=ps.pct>90?"var(--danger)":ps.pct>70?"#f59e0b":p.color;
+      html+=`<div class="budget-bar-wrap" data-bpid="${p.id}" style="cursor:pointer">
+        <div class="budget-bar-head">
+          <span class="budget-bar-name"><span style="width:8px;height:8px;border-radius:50%;background:${p.color};display:inline-block"></span>${escHtml(p.name)}</span>
+          <span class="budget-bar-numbers">${bFmt(ps.invoiced)} / ${bFmt(ps.budget)}</span>
+        </div>
+        <div class="budget-bar-track"><div class="budget-bar-fill" style="width:${Math.min(100,ps.pct)}%;background:${barColor}"></div></div>
+      </div>`;
+    });
+    html+=`</div>`;
+  }
+
+  // Recent invoices
+  if(b.invoices.length){
+    html+=`<div class="panel" style="margin-top:14px"><h3 style="margin:0 0 10px">Laatste facturen</h3>`;
+    b.invoices.slice().sort((a,c)=>c.date.localeCompare(a.date)).slice(0,5).forEach(inv=>{
+      const p=b.projects.find(x=>x.id===inv.projectId);
+      html+=`<div class="budget-table-row" style="grid-template-columns:1fr auto auto;padding:8px 0;border-bottom:1px solid var(--border)" data-binvid="${inv.id}">
+        <span style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500"><span style="width:7px;height:7px;border-radius:50%;background:${p?.color||'#94a3b8'}"></span>${escHtml(inv.supplier||inv.description||"–")}</span>
+        <span style="font-size:12px;color:var(--text-secondary)">${inv.date}</span>
+        <span style="font-size:13px;font-weight:600;color:${inv.paid?'#22c55e':'#e07a5f'}">${bFmt(inv.amount)}</span>
+      </div>`;
+    });
+    html+=`</div>`;
+  }
+
+  if(!b.projects.length){
+    html+=`<div class="budget-empty"><div style="font-size:40px;margin-bottom:12px">💰</div>
+      <h3 style="margin:0 0 6px;font-weight:600">Begin met een budgetproject</h3>
+      <p style="color:var(--text-tertiary);margin:0 0 14px">Maak een project aan om je budget bij te houden</p>
+      <button class="btn primary" id="b-add-first-project">+ Nieuw project</button>
+    </div>`;
+  }
+
+  container.innerHTML=html;
+
+  // Wire clicks
+  container.querySelectorAll("[data-bpid]").forEach(el=>{
+    el.onclick=()=>{ state.budgetView="b-project:"+el.dataset.bpid; renderBudget(); };
+  });
+  container.querySelectorAll("[data-binvid]").forEach(el=>{
+    el.onclick=()=>{ const inv=state.budget.invoices.find(x=>x.id===el.dataset.binvid); if(inv) openBudgetInvoiceModal(inv); };
+  });
+  $("b-add-first-project")?.addEventListener("click",()=>openBudgetProjectModal());
+}
+
+// ─── Budget Projects ─────────────────────────────────────
+function renderBudgetProjects(container){
+  const b=state.budget;
+  let html=`<div class="budget-section-head"><h3>Projecten</h3><button class="btn primary" id="b-add-project">+ Nieuw project</button></div>`;
+
+  if(!b.projects.length){
+    html+=`<div class="budget-empty"><p>Nog geen budgetprojecten. Maak er een aan!</p></div>`;
+  } else {
+    html+=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px">`;
+    b.projects.forEach(p=>{
+      const ps=bProjectStats(p.id);
+      const items=b.items.filter(i=>i.projectId===p.id).length;
+      const invs=b.invoices.filter(i=>i.projectId===p.id).length;
+      const barColor=ps.pct>90?"var(--danger)":ps.pct>70?"#f59e0b":p.color;
+      html+=`<div class="budget-project-card" data-bpid="${p.id}">
+        <div class="budget-project-card-top" style="background:${p.color}"></div>
+        <div class="budget-project-card-body">
+          <div style="display:flex;justify-content:space-between;align-items:start">
+            <h4 style="margin:0;font-size:15px;font-weight:700">${escHtml(p.name)}</h4>
+            <button class="btn ghost small b-edit-project" data-bpid="${p.id}" style="padding:2px 6px">✏️</button>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-secondary);margin-top:10px">
+            <span>Budget: ${bFmt(ps.budget)}</span><span>${Math.round(ps.pct)}% besteed</span>
+          </div>
+          <div class="budget-bar-track" style="margin-top:6px"><div class="budget-bar-fill" style="width:${Math.min(100,ps.pct)}%;background:${barColor}"></div></div>
+          <div style="display:flex;gap:14px;margin-top:10px;font-size:12px;color:var(--text-secondary)">
+            <span>🛒 ${items} items</span><span>🧾 ${invs} facturen</span>
+            <span style="margin-left:auto;font-weight:600;color:${ps.remaining<0?'var(--danger)':'#22c55e'}">Rest: ${bFmt(ps.remaining)}</span>
+          </div>
+        </div>
+      </div>`;
+    });
+    html+=`</div>`;
+  }
+
+  container.innerHTML=html;
+  $("b-add-project")?.addEventListener("click",()=>openBudgetProjectModal());
+  container.querySelectorAll("[data-bpid]").forEach(el=>{
+    if(el.classList.contains("b-edit-project")){
+      el.onclick=(e)=>{ e.stopPropagation(); const p=b.projects.find(x=>x.id===el.dataset.bpid); if(p) openBudgetProjectModal(p); };
+    } else if(el.classList.contains("budget-project-card")){
+      el.onclick=()=>{ state.budgetView="b-project:"+el.dataset.bpid; renderBudget(); };
+    }
+  });
+}
+
+// ─── Budget Project Detail ───────────────────────────────
+function renderBudgetProjectDetail(container, pid){
+  const b=state.budget;
+  const p=b.projects.find(x=>x.id===pid);
+  if(!p){ state.budgetView="b-projects"; renderBudget(); return; }
+  const ps=bProjectStats(pid);
+  const items=b.items.filter(i=>i.projectId===pid);
+  const invoices=b.invoices.filter(i=>i.projectId===pid);
+  const overBudget=ps.remaining<0;
+
+  let html=`<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+    <button class="btn ghost small" id="b-back-projects">← Terug</button>
+    <span style="width:12px;height:12px;border-radius:50%;background:${p.color}"></span>
+    <h3 style="margin:0;font-size:18px;font-weight:700">${escHtml(p.name)}</h3>
+    <div style="margin-left:auto;display:flex;gap:6px">
+      <button class="btn ghost small" id="b-edit-this-project">✏️ Bewerken</button>
+      <button class="btn ghost small" id="b-delete-this-project" style="color:var(--danger)">🗑 Verwijderen</button>
+    </div>
+  </div>`;
+
+  // KPIs
+  html+=`<div class="budget-kpi-grid">
+    <div class="budget-kpi"><div class="budget-kpi-label">Budget</div><div class="budget-kpi-value" style="color:${p.color}">${bFmt(ps.budget)}</div></div>
+    <div class="budget-kpi"><div class="budget-kpi-label">Gefactureerd</div><div class="budget-kpi-value" style="color:#e07a5f">${bFmt(ps.invoiced)}</div></div>
+    <div class="budget-kpi"><div class="budget-kpi-label">Betaald</div><div class="budget-kpi-value" style="color:#22c55e">${bFmt(ps.paid)}</div></div>
+    <div class="budget-kpi"><div class="budget-kpi-label">Resterend</div><div class="budget-kpi-value" style="color:${overBudget?'var(--danger)':'#3b82f6'}">${bFmt(ps.remaining)}</div>${overBudget?'<div class="budget-kpi-alert">⚠ Over budget!</div>':''}</div>
+    <div class="budget-kpi"><div class="budget-kpi-label">Ingeschat</div><div class="budget-kpi-value" style="color:#9b5de5">${bFmt(ps.estimated)}</div></div>
+  </div>`;
+
+  // Items
+  html+=`<div class="panel" style="margin-bottom:14px">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border)">
+      <h4 style="margin:0;font-size:14px;font-weight:700">🛒 Inschattingen &amp; aankopen</h4>
+      <button class="btn secondary small" id="b-add-item-detail">+ Toevoegen</button>
+    </div>`;
+  if(!items.length){
+    html+=`<div style="padding:20px;text-align:center;color:var(--text-tertiary);font-size:13px">Nog geen items.</div>`;
+  } else {
+    html+=`<div class="budget-table-head" style="grid-template-columns:1fr 100px 100px 40px"><span>Item</span><span>Bedrag</span><span>Status</span><span></span></div>`;
+    items.forEach(item=>{
+      const st=BUDGET_STATUSES[item.status]||BUDGET_STATUSES.gepland;
+      html+=`<div class="budget-table-row" style="grid-template-columns:1fr 100px 100px 40px" data-bitemid="${item.id}">
+        <div><div style="font-size:13px;font-weight:500">${escHtml(item.name)}</div>${item.description?`<div style="font-size:11px;color:var(--text-tertiary)">${escHtml(item.description)}</div>`:''}</div>
+        <span style="font-size:13px;font-weight:600">${bFmt(item.amount)}</span>
+        <span class="budget-status-badge" style="color:${st.color};background:${st.bg}">${st.label}</span>
+        <span style="text-align:right;font-size:12px;color:var(--text-tertiary)">✏️</span>
+      </div>`;
+    });
+    html+=`<div class="budget-total-row"><span>Totaal ingeschat</span><span>${bFmt(ps.estimated)}</span></div>`;
+  }
+  html+=`</div>`;
+
+  // Invoices
+  html+=`<div class="panel">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border)">
+      <h4 style="margin:0;font-size:14px;font-weight:700">🧾 Facturen</h4>
+      <button class="btn secondary small" id="b-add-inv-detail">+ Toevoegen</button>
+    </div>`;
+  if(!invoices.length){
+    html+=`<div style="padding:20px;text-align:center;color:var(--text-tertiary);font-size:13px">Nog geen facturen.</div>`;
+  } else {
+    html+=`<div class="budget-table-head" style="grid-template-columns:1fr 1fr 90px 80px 60px"><span>Leverancier</span><span>Omschrijving</span><span>Bedrag</span><span>Datum</span><span>Betaald</span></div>`;
+    invoices.slice().sort((a,c)=>c.date.localeCompare(a.date)).forEach(inv=>{
+      html+=`<div class="budget-table-row" style="grid-template-columns:1fr 1fr 90px 80px 60px" data-binvid="${inv.id}">
+        <span style="font-size:13px;font-weight:500">${escHtml(inv.supplier||"–")}</span>
+        <span style="font-size:12px;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(inv.description||"–")}</span>
+        <span style="font-size:13px;font-weight:600">${bFmt(inv.amount)}</span>
+        <span style="font-size:12px;color:var(--text-secondary)">${inv.date}</span>
+        <button class="budget-paid-btn b-toggle-paid" data-binvid="${inv.id}" style="background:${inv.paid?'#dcfce7':'var(--bg-subtle)'};color:${inv.paid?'#22c55e':'#94a3b8'}">${inv.paid?"✓ Ja":"Nee"}</button>
+      </div>`;
+    });
+    html+=`<div class="budget-total-row"><span>Totaal gefactureerd</span><span>${bFmt(ps.invoiced)}</span></div>`;
+  }
+  html+=`</div>`;
+
+  container.innerHTML=html;
+
+  // Wire
+  $("b-back-projects")?.addEventListener("click",()=>{ state.budgetView="b-dashboard"; renderBudget(); });
+  $("b-edit-this-project")?.addEventListener("click",()=>openBudgetProjectModal(p));
+  $("b-delete-this-project")?.addEventListener("click",()=>{
+    if(!confirm(`Project "${p.name}" en alle items/facturen verwijderen?`)) return;
+    state.budget.projects=state.budget.projects.filter(x=>x.id!==pid);
+    state.budget.items=state.budget.items.filter(x=>x.projectId!==pid);
+    state.budget.invoices=state.budget.invoices.filter(x=>x.projectId!==pid);
+    markDirty(); state.budgetView="b-dashboard"; renderBudget();
+  });
+  $("b-add-item-detail")?.addEventListener("click",()=>openBudgetItemModal(null,pid));
+  $("b-add-inv-detail")?.addEventListener("click",()=>openBudgetInvoiceModal(null,pid));
+  container.querySelectorAll("[data-bitemid]").forEach(el=>{
+    if(!el.classList.contains("b-toggle-paid")) el.onclick=()=>{ const item=b.items.find(x=>x.id===el.dataset.bitemid); if(item) openBudgetItemModal(item); };
+  });
+  container.querySelectorAll("[data-binvid]").forEach(el=>{
+    if(el.classList.contains("b-toggle-paid")){
+      el.onclick=(e)=>{ e.stopPropagation(); const inv=b.invoices.find(x=>x.id===el.dataset.binvid); if(inv){inv.paid=!inv.paid; markDirty(); renderBudget();} };
+    } else {
+      el.onclick=()=>{ const inv=b.invoices.find(x=>x.id===el.dataset.binvid); if(inv) openBudgetInvoiceModal(inv); };
+    }
+  });
+}
+
+// ─── Budget Invoices (all) ───────────────────────────────
+function renderBudgetInvoices(container){
+  const b=state.budget;
+  const sorted=b.invoices.slice().sort((a,c)=>c.date.localeCompare(a.date));
+  let html=`<div class="budget-section-head"><h3>Facturen</h3><button class="btn primary" id="b-add-invoice">+ Nieuwe factuur</button></div>`;
+
+  if(!sorted.length){
+    html+=`<div class="panel"><div class="budget-empty"><p>Nog geen facturen ingevoerd.</p></div></div>`;
+  } else {
+    html+=`<div class="panel">
+      <div class="budget-table-head" style="grid-template-columns:1fr 1fr 1fr 90px 80px 60px"><span>Leverancier</span><span>Project</span><span>Omschrijving</span><span>Bedrag</span><span>Datum</span><span>Betaald</span></div>`;
+    sorted.forEach(inv=>{
+      const p=b.projects.find(x=>x.id===inv.projectId);
+      html+=`<div class="budget-table-row" style="grid-template-columns:1fr 1fr 1fr 90px 80px 60px" data-binvid="${inv.id}">
+        <span style="font-size:13px;font-weight:500">${escHtml(inv.supplier||"–")}</span>
+        <span style="font-size:12px;color:var(--text-secondary);display:flex;align-items:center;gap:5px">${p?`<span style="width:7px;height:7px;border-radius:50%;background:${p.color}"></span>`:''} ${escHtml(p?.name||"–")}</span>
+        <span style="font-size:12px;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(inv.description||"–")}</span>
+        <span style="font-size:13px;font-weight:600">${bFmt(inv.amount)}</span>
+        <span style="font-size:12px;color:var(--text-secondary)">${inv.date}</span>
+        <button class="budget-paid-btn b-toggle-paid" data-binvid="${inv.id}" style="background:${inv.paid?'#dcfce7':'var(--bg-subtle)'};color:${inv.paid?'#22c55e':'#94a3b8'}">${inv.paid?"✓ Ja":"Nee"}</button>
+      </div>`;
+    });
+    const total=sorted.reduce((s,i)=>s+(i.amount||0),0);
+    html+=`<div class="budget-total-row"><span>Totaal</span><span>${bFmt(total)}</span></div></div>`;
+  }
+
+  container.innerHTML=html;
+  $("b-add-invoice")?.addEventListener("click",()=>openBudgetInvoiceModal());
+  container.querySelectorAll("[data-binvid]").forEach(el=>{
+    if(el.classList.contains("b-toggle-paid")){
+      el.onclick=(e)=>{ e.stopPropagation(); const inv=b.invoices.find(x=>x.id===el.dataset.binvid); if(inv){inv.paid=!inv.paid; markDirty(); renderBudget();} };
+    } else {
+      el.onclick=()=>{ const inv=b.invoices.find(x=>x.id===el.dataset.binvid); if(inv) openBudgetInvoiceModal(inv); };
+    }
+  });
+}
+
+// ─── Budget Items (all) ──────────────────────────────────
+function renderBudgetItems(container){
+  const b=state.budget;
+  let html=`<div class="budget-section-head"><h3>Inschattingen &amp; aankopen</h3><button class="btn primary" id="b-add-item">+ Nieuw item</button></div>`;
+
+  if(!b.items.length){
+    html+=`<div class="panel"><div class="budget-empty"><p>Nog geen inschattingen. Voeg items toe die je wilt kopen.</p></div></div>`;
+  } else {
+    html+=`<div class="panel">
+      <div class="budget-table-head" style="grid-template-columns:1fr 1fr 100px 100px 40px"><span>Item</span><span>Project</span><span>Bedrag</span><span>Status</span><span></span></div>`;
+    b.items.forEach(item=>{
+      const p=b.projects.find(x=>x.id===item.projectId);
+      const st=BUDGET_STATUSES[item.status]||BUDGET_STATUSES.gepland;
+      html+=`<div class="budget-table-row" style="grid-template-columns:1fr 1fr 100px 100px 40px" data-bitemid="${item.id}">
+        <div><div style="font-size:13px;font-weight:500">${escHtml(item.name)}</div>${item.description?`<div style="font-size:11px;color:var(--text-tertiary)">${escHtml(item.description)}</div>`:''}</div>
+        <span style="font-size:12px;color:var(--text-secondary);display:flex;align-items:center;gap:5px">${p?`<span style="width:7px;height:7px;border-radius:50%;background:${p.color}"></span>`:''} ${escHtml(p?.name||"–")}</span>
+        <span style="font-size:13px;font-weight:600">${bFmt(item.amount)}</span>
+        <span class="budget-status-badge" style="color:${st.color};background:${st.bg}">${st.label}</span>
+        <span style="text-align:right;font-size:12px;color:var(--text-tertiary)">✏️</span>
+      </div>`;
+    });
+    const total=b.items.reduce((s,i)=>s+(i.amount||0),0);
+    html+=`<div class="budget-total-row"><span>Totaal ingeschat</span><span>${bFmt(total)}</span></div></div>`;
+  }
+
+  container.innerHTML=html;
+  $("b-add-item")?.addEventListener("click",()=>openBudgetItemModal());
+  container.querySelectorAll("[data-bitemid]").forEach(el=>{
+    el.onclick=()=>{ const item=b.items.find(x=>x.id===el.dataset.bitemid); if(item) openBudgetItemModal(item); };
+  });
+}
+
+// ─── Budget Modals ───────────────────────────────────────
+function closeBudgetModal(){ $("budget-modal")?.classList.add("hidden"); }
+
+// Wire budget modal overlay click
+(function(){
+  document.addEventListener("click",(e)=>{
+    if(e.target&&e.target.id==="budget-modal") closeBudgetModal();
+  });
+})();
+
+function openBudgetProjectModal(existing){
+  const isEdit=!!existing;
+  const f=existing?{...existing}:{id:bUid(),name:"",budget:0,color:BUDGET_COLORS[state.budget.projects.length%BUDGET_COLORS.length]};
+
+  $("budget-modal-title").textContent=isEdit?"Project bewerken":"Nieuw budgetproject";
+  const body=$("budget-modal-body");
+  body.innerHTML=`
+    <div class="form-field"><label>Naam</label><input id="bf-name" type="text" value="${escHtml(f.name)}" placeholder="Bijv. Sanitair, Keuken..." /></div>
+    <div class="form-field"><label>Budget (€)</label><input id="bf-budget" type="number" step="100" min="0" value="${f.budget}" /></div>
+    <div class="form-field"><label>Kleur</label><div id="bf-colors" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px"></div></div>
+  `;
+  const colorsDiv=$("bf-colors");
+  BUDGET_COLORS.forEach(c=>{
+    const btn=document.createElement("button");
+    btn.type="button";
+    btn.style.cssText=`width:28px;height:28px;border-radius:50%;background:${c};border:3px solid ${c===f.color?"var(--text)":"transparent"};cursor:pointer;transition:border .15s`;
+    btn.onclick=()=>{ f.color=c; colorsDiv.querySelectorAll("button").forEach(b=>b.style.borderColor=b.style.background===c?"var(--text)":"transparent"); };
+    colorsDiv.appendChild(btn);
+  });
+
+  const foot=$("budget-modal-footer");
+  foot.innerHTML=`${isEdit?'<button class="btn ghost small" id="bf-delete" style="color:var(--danger)">Verwijderen</button>':''}<div style="flex:1"></div><button class="btn ghost" id="bf-cancel">Annuleren</button><button class="btn primary" id="bf-save">Opslaan</button>`;
+
+  $("bf-cancel").onclick=closeBudgetModal;
+  $("bf-save").onclick=()=>{
+    f.name=$("bf-name").value.trim();
+    f.budget=Number($("bf-budget").value)||0;
+    if(!f.name){ toast("Vul een naam in","warn"); return; }
+    const idx=state.budget.projects.findIndex(x=>x.id===f.id);
+    if(idx>=0) state.budget.projects[idx]=f; else state.budget.projects.push(f);
+    markDirty(); closeBudgetModal(); renderBudget();
+  };
+  if(isEdit) $("bf-delete").onclick=()=>{
+    if(!confirm(`"${f.name}" verwijderen met alle items en facturen?`)) return;
+    state.budget.projects=state.budget.projects.filter(x=>x.id!==f.id);
+    state.budget.items=state.budget.items.filter(x=>x.projectId!==f.id);
+    state.budget.invoices=state.budget.invoices.filter(x=>x.projectId!==f.id);
+    markDirty(); closeBudgetModal();
+    if(state.budgetView.includes(f.id)) state.budgetView="b-dashboard";
+    renderBudget();
+  };
+
+  $("budget-modal-close").onclick=closeBudgetModal;
+  $("budget-modal").classList.remove("hidden");
+  $("bf-name")?.focus();
+}
+
+function openBudgetItemModal(existing, defaultPid){
+  const isEdit=!!existing;
+  const f=existing?{...existing}:{id:bUid(),projectId:defaultPid||state.budget.projects[0]?.id||"",name:"",description:"",amount:0,status:"gepland",url:""};
+
+  $("budget-modal-title").textContent=isEdit?"Item bewerken":"Nieuw item";
+  const body=$("budget-modal-body");
+  let projOpts=state.budget.projects.map(p=>`<option value="${p.id}"${p.id===f.projectId?" selected":""}>${escHtml(p.name)}</option>`).join("");
+  body.innerHTML=`
+    <div class="form-field"><label>Project</label><select id="bf-project">${projOpts}</select></div>
+    <div class="form-field"><label>Naam</label><input id="bf-name" type="text" value="${escHtml(f.name)}" placeholder="Bijv. Toilet, Wastafel, Kraan..." /></div>
+    <div class="form-field"><label>Omschrijving (optioneel)</label><input id="bf-desc" type="text" value="${escHtml(f.description||"")}" placeholder="Merk, model, winkel..." /></div>
+    <div class="form-field"><label>Geschat bedrag (€)</label><input id="bf-amount" type="number" step="0.01" min="0" value="${f.amount}" /></div>
+    <div class="form-field"><label>Link / URL (optioneel)</label><input id="bf-url" type="text" value="${escHtml(f.url||"")}" placeholder="https://..." /></div>
+    <div class="form-field"><label>Status</label><select id="bf-status">${Object.entries(BUDGET_STATUSES).map(([k,v])=>`<option value="${k}"${k===f.status?" selected":""}>${v.label}</option>`).join("")}</select></div>
+  `;
+
+  const foot=$("budget-modal-footer");
+  foot.innerHTML=`${isEdit?'<button class="btn ghost small" id="bf-delete" style="color:var(--danger)">Verwijderen</button>':''}<div style="flex:1"></div><button class="btn ghost" id="bf-cancel">Annuleren</button><button class="btn primary" id="bf-save">Opslaan</button>`;
+
+  $("bf-cancel").onclick=closeBudgetModal;
+  $("bf-save").onclick=()=>{
+    f.projectId=$("bf-project").value;
+    f.name=$("bf-name").value.trim();
+    f.description=$("bf-desc").value.trim();
+    f.amount=Number($("bf-amount").value)||0;
+    f.url=$("bf-url").value.trim();
+    f.status=$("bf-status").value;
+    if(!f.name||!f.projectId){ toast("Vul naam en project in","warn"); return; }
+    const idx=state.budget.items.findIndex(x=>x.id===f.id);
+    if(idx>=0) state.budget.items[idx]=f; else state.budget.items.push(f);
+    markDirty(); closeBudgetModal(); renderBudget();
+  };
+  if(isEdit) $("bf-delete").onclick=()=>{
+    state.budget.items=state.budget.items.filter(x=>x.id!==f.id);
+    markDirty(); closeBudgetModal(); renderBudget();
+  };
+
+  $("budget-modal-close").onclick=closeBudgetModal;
+  $("budget-modal").classList.remove("hidden");
+  $("bf-name")?.focus();
+}
+
+function openBudgetInvoiceModal(existing, defaultPid){
+  const isEdit=!!existing;
+  const f=existing?{...existing}:{id:bUid(),projectId:defaultPid||state.budget.projects[0]?.id||"",supplier:"",description:"",amount:0,date:bToday(),paid:false,reference:""};
+
+  $("budget-modal-title").textContent=isEdit?"Factuur bewerken":"Nieuwe factuur";
+  const body=$("budget-modal-body");
+  let projOpts=state.budget.projects.map(p=>`<option value="${p.id}"${p.id===f.projectId?" selected":""}>${escHtml(p.name)}</option>`).join("");
+  body.innerHTML=`
+    <div class="form-field"><label>Project</label><select id="bf-project">${projOpts}</select></div>
+    <div class="form-field"><label>Leverancier</label><input id="bf-supplier" type="text" value="${escHtml(f.supplier)}" placeholder="Bijv. Praxis, Baderie..." /></div>
+    <div class="form-field"><label>Omschrijving</label><input id="bf-desc" type="text" value="${escHtml(f.description||"")}" placeholder="Waar is de factuur voor?" /></div>
+    <div class="form-field"><label>Bedrag (€)</label><input id="bf-amount" type="number" step="0.01" min="0" value="${f.amount}" /></div>
+    <div class="form-field"><label>Datum</label><input id="bf-date" type="date" value="${f.date}" /></div>
+    <div class="form-field"><label>Referentie (optioneel)</label><input id="bf-ref" type="text" value="${escHtml(f.reference||"")}" placeholder="Factuurnummer..." /></div>
+    <div class="form-field"><label>Betaald</label><button type="button" class="toggle-btn ${f.paid?"on":""}" id="bf-paid"><span class="toggle-track"><span class="toggle-thumb"></span></span><span class="toggle-label">${f.paid?"Ja":"Nee"}</span></button></div>
+  `;
+  $("bf-paid").onclick=()=>{
+    const btn=$("bf-paid");
+    const nowOn=btn.classList.toggle("on");
+    btn.querySelector(".toggle-label").textContent=nowOn?"Ja":"Nee";
+  };
+
+  const foot=$("budget-modal-footer");
+  foot.innerHTML=`${isEdit?'<button class="btn ghost small" id="bf-delete" style="color:var(--danger)">Verwijderen</button>':''}<div style="flex:1"></div><button class="btn ghost" id="bf-cancel">Annuleren</button><button class="btn primary" id="bf-save">Opslaan</button>`;
+
+  $("bf-cancel").onclick=closeBudgetModal;
+  $("bf-save").onclick=()=>{
+    f.projectId=$("bf-project").value;
+    f.supplier=$("bf-supplier").value.trim();
+    f.description=$("bf-desc").value.trim();
+    f.amount=Number($("bf-amount").value)||0;
+    f.date=$("bf-date").value;
+    f.reference=$("bf-ref").value.trim();
+    f.paid=$("bf-paid").classList.contains("on");
+    if(!f.projectId){ toast("Kies een project","warn"); return; }
+    const idx=state.budget.invoices.findIndex(x=>x.id===f.id);
+    if(idx>=0) state.budget.invoices[idx]=f; else state.budget.invoices.push(f);
+    markDirty(); closeBudgetModal(); renderBudget();
+  };
+  if(isEdit) $("bf-delete").onclick=()=>{
+    state.budget.invoices=state.budget.invoices.filter(x=>x.id!==f.id);
+    markDirty(); closeBudgetModal(); renderBudget();
+  };
+
+  $("budget-modal-close").onclick=closeBudgetModal;
+  $("budget-modal").classList.remove("hidden");
+  $("bf-supplier")?.focus();
+}
+
+// ═══════════════════════════════════════════════════════════
 // iCAL EXPORT
 // ═══════════════════════════════════════════════════════════
 function buildICalString(){
@@ -2074,7 +2573,8 @@ function exportJSON(){
   const payload={
     exported_at:new Date().toISOString(),
     tasks:state.tasks, people:state.people, groups:state.groups,
-    statuses:state.statuses, locations:state.locations, categories:state.categories, projects:state.projects
+    statuses:state.statuses, locations:state.locations, categories:state.categories, projects:state.projects,
+    budget:state.budget
   };
   const blob=new Blob([JSON.stringify(payload,null,2)],{type:"application/json"});
   const a=document.createElement("a");
@@ -2099,6 +2599,7 @@ async function importJSON(){
     if(obj.locations) state.locations=obj.locations;
     if(obj.categories) state.categories=obj.categories;
     if(obj.projects) state.projects=obj.projects;
+    if(obj.budget) state.budget=obj.budget;
     state.tasks.forEach(t=>ensureSchedule(t));
     await commitChanges();
     toast("Import klaar ✓");
@@ -2350,6 +2851,7 @@ async function loadDefaults(){
     state.locations=[...DEFAULT_LOCATIONS];
     state.categories=[...DEFAULT_CATEGORIES];
     state.projects=[...DEFAULT_PROJECTS];
+    state.budget={projects:[],items:[],invoices:[]};
     state.tasks.forEach(t=>ensureSchedule(t));
     saveLocal();
   } catch(e){ console.warn("Could not load defaults:",e); }
@@ -2424,6 +2926,7 @@ function loadLocalData(){
     state.locations=local.locations||[...DEFAULT_LOCATIONS];
     state.categories=local.categories||[...DEFAULT_CATEGORIES];
     state.projects=local.projects||[...DEFAULT_PROJECTS];
+    state.budget=local.budget||{projects:[],items:[],invoices:[]};
   }
 }
 
@@ -2863,6 +3366,7 @@ function startApp(){
   if(!state.locations||!state.locations.length) state.locations=[...DEFAULT_LOCATIONS];
   if(!state.categories||!state.categories.length) state.categories=[...DEFAULT_CATEGORIES];
   if(!state.projects) state.projects=[...DEFAULT_PROJECTS];
+  if(!state.budget) state.budget={projects:[],items:[],invoices:[]};
 
   takeSnapshot();
 

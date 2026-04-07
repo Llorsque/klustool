@@ -1222,6 +1222,135 @@ a:hover { text-decoration: underline; }
 .form-field textarea { resize: vertical; min-height: 60px; }
 
 /* ============================================
+   BUDGET MODULE
+   ============================================ */
+.budget-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 4px;
+  background: var(--bg-subtle);
+  border-radius: var(--radius-lg);
+  margin-bottom: 20px;
+  width: fit-content;
+}
+.budget-tab {
+  padding: 8px 18px;
+  border: none;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .15s;
+}
+.budget-tab.active {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
+}
+.budget-tab:hover:not(.active) { color: var(--text); }
+
+.budget-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.budget-kpi {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+}
+.budget-kpi-label { font-size: 11px; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: .4px; margin-bottom: 4px; }
+.budget-kpi-value { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; font-variant-numeric: tabular-nums; }
+.budget-kpi-alert { font-size: 10px; font-weight: 600; color: var(--danger); margin-top: 2px; }
+
+.budget-bar-wrap { margin-bottom: 14px; }
+.budget-bar-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+.budget-bar-name { font-size: 13px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 6px; }
+.budget-bar-numbers { font-size: 12px; color: var(--text-secondary); }
+.budget-bar-track { height: 8px; border-radius: 4px; background: var(--bg-subtle); overflow: hidden; }
+.budget-bar-fill { height: 100%; border-radius: 4px; transition: width .4s ease; }
+
+.budget-project-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  cursor: pointer;
+  transition: box-shadow .15s, border-color .15s;
+}
+.budget-project-card:hover { border-color: var(--border-strong); box-shadow: var(--shadow-sm); }
+.budget-project-card-top { height: 4px; }
+.budget-project-card-body { padding: 16px; }
+
+.budget-table-head {
+  display: grid;
+  gap: 0;
+  padding: 6px 16px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  border-bottom: 1px solid var(--border);
+}
+.budget-table-row {
+  display: grid;
+  gap: 0;
+  padding: 10px 16px;
+  align-items: center;
+  border-bottom: 1px solid var(--bg-subtle);
+  cursor: pointer;
+  transition: background .1s;
+}
+.budget-table-row:hover { background: var(--bg-subtle); }
+
+.budget-status-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 600;
+}
+.budget-paid-btn {
+  padding: 3px 10px;
+  border-radius: var(--radius);
+  border: none;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .15s;
+}
+.budget-total-row {
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  border-top: 2px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+}
+.budget-empty {
+  padding: 40px;
+  text-align: center;
+  color: var(--text-tertiary);
+}
+.budget-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.budget-section-head h3 {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0;
+}
+
+/* ============================================
    NOTIFICATION BELL & PANEL
    ============================================ */
 .btn-notif-bell {
