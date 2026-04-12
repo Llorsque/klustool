@@ -82,7 +82,17 @@
         "color": "#81b29a"
       }
     ],
-    "items": [],
+    "items": [
+      {
+        "id": "b-mqj07rr",
+        "projectId": "b-lk14esu",
+        "name": "Puincontainer",
+        "description": "6m3 NNRD",
+        "amount": 400,
+        "status": "gepland",
+        "url": "https://webshop.nnrd.nl/container-huren"
+      }
+    ],
     "invoices": []
   }
 }
