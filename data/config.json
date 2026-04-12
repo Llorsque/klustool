@@ -91,6 +91,15 @@
         "amount": 400,
         "status": "gepland",
         "url": "https://webshop.nnrd.nl/container-huren"
+      },
+      {
+        "id": "b-bn1hznu",
+        "projectId": "b-lk14esu",
+        "name": "PBM's slopen",
+        "description": "",
+        "amount": 0,
+        "status": "gepland",
+        "url": ""
       }
     ],
     "invoices": []
