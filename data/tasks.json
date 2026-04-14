@@ -68,13 +68,13 @@
     "steps": [
       "Handjes regelen"
     ],
-    "notes": "Ids | Bevestigd\nMark | Bevestigd\nKay | Bevestigd\nIan|Bevestigd\nRutger|Bevestigd\nNathan | Bevestigd\nJort| Bevestigd\nJustin | Bevestigd\nSiebje | Bevestigd",
+    "notes": "Ids | Bevestigd\nMark | Bevestigd\nKay | Bevestigd\nIan | Bevestigd (dagdeel)\nRutger | Bevestigd\nNathan | Bevestigd\nJort | Bevestigd\nJustin | Bevestigd\nSiebje | Bevestigd\nJan | Optioneel",
     "inCalendar": true,
     "subtasks": [
       {
         "id": "st-l41voj",
         "title": "Handjes regelen",
-        "status": "todo",
+        "status": "done",
         "scheduled": {
           "start": "",
           "end": ""
