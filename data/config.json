@@ -102,6 +102,17 @@
         "url": ""
       }
     ],
-    "invoices": []
+    "invoices": [
+      {
+        "id": "b-oelzdzj",
+        "projectId": "b-lk14esu",
+        "supplier": "NNRD",
+        "description": "Puincontainer",
+        "amount": 398.09,
+        "date": "2026-04-14",
+        "paid": true,
+        "reference": ""
+      }
+    ]
   }
 }
