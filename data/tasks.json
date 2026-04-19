@@ -63,7 +63,38 @@
     },
     "dependencies": [],
     "definition_of_done": "",
-    "materials": [],
+    "materials": [
+      {
+        "item": "Sloophamer",
+        "qty": "1",
+        "status": "Ids neemt mee"
+      },
+      {
+        "item": "Sloophamer",
+        "qty": "1",
+        "status": "Willem neemt mee"
+      },
+      {
+        "item": "Sloophamer",
+        "qty": "1",
+        "status": "Mark neemt mee"
+      },
+      {
+        "item": "Breekijzer",
+        "qty": "1",
+        "status": "Ids neemt mee"
+      },
+      {
+        "item": "Breekijzer",
+        "qty": "1",
+        "status": "Willem neemt mee"
+      },
+      {
+        "item": "Breekijzer",
+        "qty": "1",
+        "status": "Mark neemt mee"
+      }
+    ],
     "tools": [],
     "steps": [
       "Handjes regelen"
