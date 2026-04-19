@@ -1287,8 +1287,8 @@
     "scheduled": {
       "date": "2026-05-02",
       "timeblock": "",
-      "start": "2026-05-02T11:07",
-      "end": "2026-05-02T12:07"
+      "start": "2026-05-02T11:00",
+      "end": "2026-05-02T13:00"
     },
     "dependencies": [],
     "definition_of_done": "",
