@@ -93,6 +93,11 @@
         "item": "Breekijzer",
         "qty": "1",
         "status": "Mark neemt mee"
+      },
+      {
+        "item": "Bouwstofzuiger",
+        "qty": "1",
+        "status": "Ids neemt mee"
       }
     ],
     "tools": [],
