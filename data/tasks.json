@@ -1370,5 +1370,39 @@
     "notes": "",
     "inCalendar": true,
     "allDay": false
+  },
+  {
+    "id": "TASK-011",
+    "project": "Mesdagstraat",
+    "group": "Mesdagstraat",
+    "location": "",
+    "type": "",
+    "category": "",
+    "title": "Bezichtigingen",
+    "priority": "",
+    "status": "Ingepland",
+    "owner": "",
+    "assignees": [],
+    "estimate_hours": {
+      "optimistic": 0,
+      "realistic": 0,
+      "worst": 0
+    },
+    "actual_hours": 0,
+    "scheduled": {
+      "date": "2026-05-08",
+      "timeblock": "",
+      "start": "2026-05-08T09:00",
+      "end": "2026-05-08T12:00"
+    },
+    "dependencies": [],
+    "definition_of_done": "",
+    "materials": [],
+    "tools": [],
+    "steps": [],
+    "subtasks": [],
+    "notes": "",
+    "inCalendar": true,
+    "allDay": false
   }
 ]
