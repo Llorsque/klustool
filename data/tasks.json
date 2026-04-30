@@ -1543,5 +1543,73 @@
     "notes": "",
     "inCalendar": true,
     "allDay": false
+  },
+  {
+    "id": "TASK-035",
+    "project": "",
+    "group": "Verkoop",
+    "location": "",
+    "type": "",
+    "category": "",
+    "title": "Nieuwe klus",
+    "priority": "",
+    "status": "Backlog",
+    "owner": "",
+    "assignees": [],
+    "estimate_hours": {
+      "optimistic": 0,
+      "realistic": 0,
+      "worst": 0
+    },
+    "actual_hours": 0,
+    "scheduled": {
+      "date": "",
+      "timeblock": "",
+      "start": "",
+      "end": ""
+    },
+    "dependencies": [],
+    "definition_of_done": "",
+    "materials": [],
+    "tools": [],
+    "steps": [],
+    "subtasks": [],
+    "notes": "",
+    "inCalendar": true,
+    "allDay": false
+  },
+  {
+    "id": "TASK-036",
+    "project": "Mesdagstraat",
+    "group": "Mesdagstraat",
+    "location": "",
+    "type": "",
+    "category": "",
+    "title": "Bezichtigingen",
+    "priority": "",
+    "status": "Ingepland",
+    "owner": "",
+    "assignees": [],
+    "estimate_hours": {
+      "optimistic": 0,
+      "realistic": 0,
+      "worst": 0
+    },
+    "actual_hours": 0,
+    "scheduled": {
+      "date": "2026-05-07",
+      "timeblock": "",
+      "start": "2026-05-07T15:00",
+      "end": "2026-05-07T17:00"
+    },
+    "dependencies": [],
+    "definition_of_done": "",
+    "materials": [],
+    "tools": [],
+    "steps": [],
+    "subtasks": [],
+    "notes": "",
+    "inCalendar": true,
+    "allDay": false
   }
 ]
