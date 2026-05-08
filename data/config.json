@@ -112,6 +112,16 @@
         "date": "2026-04-14",
         "paid": true,
         "reference": ""
+      },
+      {
+        "id": "b-k4yz0g7",
+        "projectId": "b-lk14esu",
+        "supplier": "Bouwmaat",
+        "description": "PBM slopen",
+        "amount": 122.79,
+        "date": "2026-05-08",
+        "paid": true,
+        "reference": ""
       }
     ]
   }
