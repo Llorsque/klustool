@@ -100,6 +100,15 @@
         "amount": 0,
         "status": "gepland",
         "url": ""
+      },
+      {
+        "id": "b-1m8egll",
+        "projectId": "b-91dlm97",
+        "name": "Klic aanvraag",
+        "description": "",
+        "amount": 50,
+        "status": "gepland",
+        "url": ""
       }
     ],
     "invoices": [
