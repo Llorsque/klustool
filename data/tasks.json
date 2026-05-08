@@ -1577,5 +1577,41 @@
     "notes": "",
     "inCalendar": true,
     "allDay": true
+  },
+  {
+    "id": "TASK-035",
+    "project": "Wielsterdyk",
+    "group": "Wielsterdyk",
+    "location": "",
+    "type": "",
+    "category": "",
+    "title": "Laminaat in bouwbak doen",
+    "priority": "",
+    "status": "Ingepland",
+    "owner": "",
+    "assignees": [
+      "justin"
+    ],
+    "estimate_hours": {
+      "optimistic": 0,
+      "realistic": 0,
+      "worst": 0
+    },
+    "actual_hours": 0,
+    "scheduled": {
+      "date": "2026-05-15",
+      "timeblock": "",
+      "start": "2026-05-15T16:00",
+      "end": "2026-05-15T17:00"
+    },
+    "dependencies": [],
+    "definition_of_done": "",
+    "materials": [],
+    "tools": [],
+    "steps": [],
+    "subtasks": [],
+    "notes": "",
+    "inCalendar": true,
+    "allDay": false
   }
 ]
