@@ -131,6 +131,16 @@
         "date": "2026-05-08",
         "paid": true,
         "reference": ""
+      },
+      {
+        "id": "b-xyo0e1j",
+        "projectId": "b-91dlm97",
+        "supplier": "KLIC",
+        "description": "Kabels tuin",
+        "amount": 10.5,
+        "date": "2026-05-12",
+        "paid": true,
+        "reference": ""
       }
     ]
   }
