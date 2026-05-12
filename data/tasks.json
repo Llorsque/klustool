@@ -1414,7 +1414,7 @@
     "category": "",
     "title": "Bezichtigingen",
     "priority": "",
-    "status": "Ingepland",
+    "status": "Bezig",
     "owner": "",
     "assignees": [],
     "estimate_hours": {
@@ -1623,7 +1623,7 @@
     "category": "",
     "title": "Klic aanvragen",
     "priority": "",
-    "status": "Bezig",
+    "status": "Afgerond",
     "owner": "",
     "assignees": [
       "justin"
