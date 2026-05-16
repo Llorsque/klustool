@@ -44,7 +44,7 @@
     "category": "",
     "title": "Bovenverdieping slopen",
     "priority": "",
-    "status": "Ingepland",
+    "status": "Bezig",
     "owner": "",
     "assignees": [
       "justin"
@@ -1414,7 +1414,7 @@
     "category": "",
     "title": "Bezichtigingen",
     "priority": "",
-    "status": "Bezig",
+    "status": "Afgerond",
     "owner": "",
     "assignees": [],
     "estimate_hours": {
@@ -1553,7 +1553,7 @@
     "category": "",
     "title": "Bouwbak wordt gebracht",
     "priority": "",
-    "status": "Ingepland",
+    "status": "Bezig",
     "owner": "",
     "assignees": [],
     "estimate_hours": {
@@ -1587,7 +1587,7 @@
     "category": "",
     "title": "Laminaat in bouwbak doen",
     "priority": "",
-    "status": "Ingepland",
+    "status": "Afgerond",
     "owner": "",
     "assignees": [
       "justin"
