@@ -161,6 +161,16 @@
         "date": "2026-05-16",
         "paid": true,
         "reference": ""
+      },
+      {
+        "id": "b-9ek3l74",
+        "projectId": "b-lk14esu",
+        "supplier": "Poiesz",
+        "description": "Vuilniszakken",
+        "amount": 6.37,
+        "date": "2026-05-16",
+        "paid": true,
+        "reference": ""
       }
     ]
   }
