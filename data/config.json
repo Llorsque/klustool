@@ -141,6 +141,16 @@
         "date": "2026-05-12",
         "paid": true,
         "reference": ""
+      },
+      {
+        "id": "b-1hofshv",
+        "projectId": "b-lk14esu",
+        "supplier": "NNRD",
+        "description": "6m3 NNRD",
+        "amount": 398.09,
+        "date": "2026-05-16",
+        "paid": true,
+        "reference": ""
       }
     ]
   }
