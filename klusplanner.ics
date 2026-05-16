@@ -22,7 +22,7 @@ DTEND:20260517T170000
 SUMMARY:Bovenverdieping slopen
 LOCATION:Zolder
 DESCRIPTION:Groep: Wielsterdyk\\nSubtaken: Handjes regelen\\nUitvoerder: Justin\\nIds | Bevestigd\nMark | Bevestigd\nKay | Bevestigd\nIan | Bevestigd (dagdeel)\nNathan | Bevestigd\nJort | Bevestigd\nJustin | Bevestigd\nSiebje | Bevestigd\n
-STATUS:CONFIRMED
+STATUS:COMPLETED
 END:VEVENT
 BEGIN:VEVENT
 UID:TASK-001@klusplanner
