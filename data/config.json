@@ -191,6 +191,16 @@
         "date": "2026-05-16",
         "paid": true,
         "reference": ""
+      },
+      {
+        "id": "b-ih07bfi",
+        "projectId": "b-lk14esu",
+        "supplier": "Jumbo",
+        "description": "Boodschappen lunch klusdag",
+        "amount": 100.82,
+        "date": "2026-05-16",
+        "paid": true,
+        "reference": ""
       }
     ]
   }
