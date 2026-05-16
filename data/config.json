@@ -181,6 +181,16 @@
         "date": "2026-05-16",
         "paid": true,
         "reference": ""
+      },
+      {
+        "id": "b-d8ue10d",
+        "projectId": "b-lk14esu",
+        "supplier": "28,28",
+        "description": "Koppeling en tang",
+        "amount": 0,
+        "date": "2026-05-16",
+        "paid": true,
+        "reference": ""
       }
     ]
   }
