@@ -201,6 +201,16 @@
         "date": "2026-05-16",
         "paid": true,
         "reference": ""
+      },
+      {
+        "id": "b-i9fzrxn",
+        "projectId": "b-lk14esu",
+        "supplier": "Gamma",
+        "description": "",
+        "amount": 35.04,
+        "date": "2026-05-16",
+        "paid": true,
+        "reference": ""
       }
     ]
   }
