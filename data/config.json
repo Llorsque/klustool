@@ -151,6 +151,16 @@
         "date": "2026-05-16",
         "paid": true,
         "reference": ""
+      },
+      {
+        "id": "b-lduz123",
+        "projectId": "b-lk14esu",
+        "supplier": "Gamma",
+        "description": "Verf, schuurblokjes, koppelingen",
+        "amount": 81.39,
+        "date": "2026-05-16",
+        "paid": true,
+        "reference": ""
       }
     ]
   }
