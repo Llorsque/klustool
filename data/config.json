@@ -171,6 +171,16 @@
         "date": "2026-05-16",
         "paid": true,
         "reference": ""
+      },
+      {
+        "id": "b-t12egwv",
+        "projectId": "b-lk14esu",
+        "supplier": "Praxis",
+        "description": "Koppelingen",
+        "amount": 41.45,
+        "date": "2026-05-16",
+        "paid": true,
+        "reference": ""
       }
     ]
   }
