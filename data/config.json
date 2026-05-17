@@ -115,6 +115,15 @@
         "amount": 50,
         "status": "gepland",
         "url": ""
+      },
+      {
+        "id": "b-6n2ntxp",
+        "projectId": "b-o3xwojv",
+        "name": "Bankdeel Ikea",
+        "description": "Jattebo",
+        "amount": 370,
+        "status": "gepland",
+        "url": "https://www.ikea.com/nl/nl/p/jattebo-1-5-zitselement-met-opbergruimte-samsala-donker-geel-groen-s19471458/"
       }
     ],
     "invoices": [
