@@ -80,6 +80,12 @@
         "name": "Bovenverdieping",
         "budget": 25000,
         "color": "#81b29a"
+      },
+      {
+        "id": "b-o3xwojv",
+        "name": "Aankopen voor woning",
+        "budget": 0,
+        "color": "#f2cc8f"
       }
     ],
     "items": [
