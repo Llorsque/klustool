@@ -124,6 +124,15 @@
         "amount": 370,
         "status": "gepland",
         "url": "https://www.ikea.com/nl/nl/p/jattebo-1-5-zitselement-met-opbergruimte-samsala-donker-geel-groen-s19471458/"
+      },
+      {
+        "id": "b-v8gzar0",
+        "projectId": "b-o3xwojv",
+        "name": "TV Meubel (ikea materialen)",
+        "description": "",
+        "amount": 350,
+        "status": "gepland",
+        "url": "https://www.ikea.com/nl/nl/p/metod-bovenkast-wit-80205540/"
       }
     ],
     "invoices": [
