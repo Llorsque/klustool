@@ -151,6 +151,15 @@
         "amount": 850,
         "status": "gepland",
         "url": ""
+      },
+      {
+        "id": "b-t972dtu",
+        "projectId": "b-o3xwojv",
+        "name": "Vloerkleed",
+        "description": "",
+        "amount": 400,
+        "status": "gepland",
+        "url": ""
       }
     ],
     "invoices": [
