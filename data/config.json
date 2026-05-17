@@ -133,6 +133,15 @@
         "amount": 350,
         "status": "gepland",
         "url": "https://www.ikea.com/nl/nl/p/metod-bovenkast-wit-80205540/"
+      },
+      {
+        "id": "b-arebzxb",
+        "projectId": "b-o3xwojv",
+        "name": "TV Meubel ombouw",
+        "description": "Hout, verf en schroeven",
+        "amount": 300,
+        "status": "gepland",
+        "url": ""
       }
     ],
     "invoices": [
